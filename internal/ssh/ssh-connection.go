@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const SshPort = 22
+const PORT = 22
 
 func InitSSHConnection(user, password, host string) {
 	config := &ssh.ClientConfig{
@@ -21,7 +21,7 @@ func InitSSHConnection(user, password, host string) {
 		HostKeyAlgorithms: []string{ssh.KeyAlgoRSA, ssh.KeyAlgoDSA, ssh.KeyAlgoED25519, ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521},
 		Timeout:           5 * time.Second,
 	}
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host, SshPort), config)
+	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host, PORT), config)
 	if err != nil {
 		log.Fatal(color.InRed(err.Error()))
 	}
@@ -37,11 +37,10 @@ func InitSSHConnection(user, password, host string) {
 		log.Fatal(color.InRed(err.Error()))
 	}
 
+	AddPublicKeys(session)
+
 	defer func(session *ssh.Session) {
-		err := session.Close()
-		if err != nil {
-			log.Fatalf(color.InRed("Failed to close SSH connection"))
-		}
+		_ = session.Close()
 	}(session)
 
 	session.Stdout = os.Stdout
