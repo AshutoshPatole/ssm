@@ -6,12 +6,13 @@ import (
 	"golang.org/x/crypto/ssh"
 	"log"
 	"os"
+	"ssm-v2/internal/store"
 	"time"
 )
 
 const PORT = 22
 
-func InitSSHConnection(user, password, host string) {
+func InitSSHConnection(user, password, host, group, environment, alias string) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -45,5 +46,5 @@ func InitSSHConnection(user, password, host string) {
 
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
-
+	store.Save(group, environment, host, user, alias)
 }

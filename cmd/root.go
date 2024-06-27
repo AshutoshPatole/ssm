@@ -57,7 +57,7 @@ func initConfig() {
 		// Search config in home directory with name ".ssm-v2" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".ssm-v2")
+		viper.SetConfigName(".ssm.yaml")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
