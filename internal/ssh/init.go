@@ -5,14 +5,14 @@ import (
 	"github.com/TwiN/go-color"
 	"golang.org/x/crypto/ssh"
 	"log"
-	"os"
+	"ssm-v2/internal/configuration"
 	"ssm-v2/internal/store"
 	"time"
 )
 
 const PORT = 22
 
-func InitSSHConnection(user, password, host, group, environment, alias string) {
+func InitSSHConnection(user, password, host, group, environment, alias string, setupDotFiles bool) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -33,18 +33,9 @@ func InitSSHConnection(user, password, host, group, environment, alias string) {
 		}
 	}(client)
 
-	session, err := client.NewSession()
-	if err != nil {
-		log.Fatal(color.InRed(err.Error()))
-	}
-
-	AddPublicKeys(session)
-
-	defer func(session *ssh.Session) {
-		_ = session.Close()
-	}(session)
-
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
+	AddPublicKeys(client)
 	store.Save(group, environment, host, user, alias)
+	if setupDotFiles {
+		configuration.SetupConfiguration(client, user)
+	}
 }
