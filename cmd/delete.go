@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
 	"ssm-v2/internal/store"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 var (
