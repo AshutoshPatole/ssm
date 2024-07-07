@@ -4,8 +4,8 @@ package cmd
 import (
 	"errors"
 	"github.com/TwiN/go-color"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"log"
 	"ssm-v2/internal/ssh"
 )
 
@@ -37,7 +37,7 @@ var addCmd = &cobra.Command{
 			}
 		}
 		if !validEnvironment {
-			log.Fatal(color.InRed("Invalid environment value"))
+			logrus.Fatalln(color.InRed("Invalid environment value"))
 		}
 		addServer(args[0])
 	},
@@ -46,7 +46,7 @@ var addCmd = &cobra.Command{
 func addServer(host string) {
 	password, err := ssh.AskPassword()
 	if err != nil {
-		log.Fatal(color.InRed("Error reading password"))
+		logrus.Fatal(color.InRed("Error reading password"))
 	}
 
 	ssh.InitSSHConnection(username, password, host, group, environment, alias, setupDotFiles)
