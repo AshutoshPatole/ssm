@@ -61,5 +61,4 @@ func init() {
 	addCmd.Flags().BoolVarP(&setupDotFiles, "dotfiles", "d", false, "Configure the dotfiles")
 	_ = addCmd.MarkFlagRequired("group")
 	_ = addCmd.MarkFlagRequired("alias")
-	_ = addCmd.MarkFlagRequired("dotfiles")
 }
