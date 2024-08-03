@@ -271,7 +271,7 @@ func (m model) View() string {
 
 		checkbox := " "
 		if _, ok := m.selected[i]; ok {
-			checkbox = "x"
+			checkbox = "🗸"
 		}
 
 		fileType := ""
@@ -283,12 +283,15 @@ func (m model) View() string {
 	}
 
 	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	instructionsStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	s += "\n" + statusStyle.Render(m.status)
-	s += "\n\nPress 'space' to select/deselect files"
-	s += "\nPress 'enter' to navigate into directory"
-	s += "\nPress 'backspace' to navigate back to previous directory"
-	s += "\nPress 'd' to download selected files"
-	s += "\nPress 'q' to quit"
+	s += "\n\n" + instructionsStyle.Render(
+		"Press 'space' to select/deselect files\n"+
+			"Press 'enter' to navigate into directory\n"+
+			"Press 'backspace' to navigate back to previous directory\n"+
+			"Press 'd' to download selected files\n"+
+			"Press 'q' to quit",
+	)
 
 	return s
 }
