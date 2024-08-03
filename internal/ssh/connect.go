@@ -11,7 +11,7 @@ import (
 	"syscall"
 )
 
-func Connect(user, server, environment string) {
+func Connect(user, server string) {
 	homeDir, _ := os.UserHomeDir()
 	privateKey := filepath.Join(homeDir, ".ssh/id_ed25519")
 

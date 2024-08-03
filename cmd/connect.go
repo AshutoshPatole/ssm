@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/TwiN/go-color"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log"
 	"os"
 	"ssm-v2/internal/ssh"
 	"ssm-v2/internal/store"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 type serverOption struct {
@@ -45,7 +44,11 @@ ssm connect group-name -e ppd
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		ListToConnectServers(args[0], filterEnvironment)
+		user, host, err := ListToConnectServers(args[0], filterEnvironment)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ConnectToServer(user, host)
 	},
 }
 
@@ -54,7 +57,7 @@ func init() {
 	connectCmd.Flags().StringVarP(&filterEnvironment, "filter", "f", "", "filter list by environment")
 }
 
-func ListToConnectServers(group, environment string) {
+func ListToConnectServers(group, environment string) (string, string, error) {
 	var config store.Config
 
 	if err := viper.Unmarshal(&config); err != nil {
@@ -111,7 +114,7 @@ func ListToConnectServers(group, environment string) {
 	}
 	err := survey.AskOne(prompt, &selectedHostName)
 	if err != nil {
-		return
+		return "", "", err
 	}
 
 	// Extract environment name from the selected option
@@ -131,8 +134,14 @@ func ListToConnectServers(group, environment string) {
 		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "User", colonWidth, user)))
 		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "Environment", colonWidth, selectedEnvName)))
 
-		ssh.Connect(user, selectedHostIP, selectedEnvName)
+		//ssh.Connect(user, selectedHostIP)
+		return user, selectedHostIP, nil
 	} else {
 		fmt.Println(color.InRed("Aborted! Bad Request"))
+		return "", "", err
 	}
+}
+
+func ConnectToServer(user, host string) {
+	ssh.Connect(user, host)
 }
