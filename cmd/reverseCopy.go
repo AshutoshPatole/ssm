@@ -56,7 +56,7 @@ func init() {
 	rootCmd.AddCommand(reverseCopyCmd)
 }
 
-// FileInfo holds the name, type of file, and its path
+// FileInfo holds the name, type of file, path
 type FileInfo struct {
 	Name  string
 	IsDir bool
@@ -73,7 +73,7 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		_ = session.Close()
 	}(session)
 
-	output, err := session.Output("ls -l " + remoteDir + " | awk '{print $1 \" \" $9}'")
+	output, err := session.Output("ls -l " + remoteDir + " | awk '{print $1 \" \" $5 \" \" $9}'")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files: %w", err)
 	}
@@ -84,9 +84,9 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, " ", 2)
+		parts := strings.SplitN(line, " ", 3)
 		isDir := parts[0][0] == 'd'
-		files = append(files, FileInfo{Name: parts[1], IsDir: isDir, Path: filepath.Join(remoteDir, parts[1])})
+		files = append(files, FileInfo{Name: parts[2], IsDir: isDir, Path: filepath.Join(remoteDir, parts[2])})
 	}
 
 	return files, nil
@@ -243,7 +243,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "d":
 			if !m.downloading {
 				m.downloading = true
-				m.status = "Downloading selected files..."
+				m.status = "Downloading files... "
 				return m, downloadFiles(m.client, m.selectedFiles())
 			}
 		}
@@ -251,6 +251,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case downloadMsg:
 		if msg.success {
 			m.status = "Downloaded " + msg.file + " successfully"
+			m.cursor = 0
+			m.selected = make(map[int]struct{})
 		} else {
 			m.status = "Failed to download " + msg.file + ": " + msg.err.Error()
 		}
@@ -262,7 +264,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	s := "Files:\n\n"
-
 	for i, file := range m.files {
 		cursor := " "
 		if m.cursor == i {
@@ -276,10 +277,12 @@ func (m model) View() string {
 
 		fileType := ""
 		if file.IsDir {
-			fileType = "[DIR] "
+			fileType = "🗁 "
+		} else {
+			fileType = "  "
 		}
 
-		s += fmt.Sprintf("%s [%s] %s%s\n", cursor, checkbox, fileType, file.Name)
+		s += fmt.Sprintf("%s [%s] %s %s\n", cursor, checkbox, fileType, file.Name)
 	}
 
 	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
