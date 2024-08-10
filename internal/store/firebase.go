@@ -62,7 +62,7 @@ func LoginUser(email, password string) (map[string]interface{}, error) {
 }
 
 func authenticateWithFirebase(email, password string) (map[string]interface{}, error) {
-	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=%s", "AIzaSyCvTnhw4FDu0Q5Q709xZyCHkRvIcLLeReY")
+	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=%s", "")
 	payload := map[string]string{
 		"email":             email,
 		"password":          password,

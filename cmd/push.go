@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"log"
+	"os"
 	"ssm-v2/internal/store"
 )
 
@@ -33,6 +34,7 @@ func init() {
 }
 
 func upload(documentID string) {
+
 	client, err := store.App.Firestore(context.Background())
 	if err != nil {
 		log.Fatalf("error getting Firestore client: %v", err)
@@ -44,13 +46,34 @@ func upload(documentID string) {
 		}
 	}(client)
 
+	ssmYaml, _ := readFileAsBytes(".ssm.yaml")
+	publicKey, _ := readFileAsBytes(".ssh/id_ed25519.pub")
+	privateKey, _ := readFileAsBytes(".ssh/id_ed25519")
+
 	configurations := client.Collection("configurations")
 	//configurations.
-	_, err = configurations.Doc(documentID).Create(context.Background(), map[string]interface{}{
-		"something": "with nothing",
+	_, err = configurations.Doc(documentID).Set(context.Background(), map[string]interface{}{
+		"ssm_yaml": ssmYaml,
+		"public":   publicKey,
+		"private":  privateKey,
 	})
 	if err != nil {
 		logrus.Fatalf("error adding configuration: %v", err)
 	}
 	logrus.Info("Configuration uploaded with reference %s", documentID)
+}
+
+func readFileAsBytes(path string) ([]byte, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("Error getting home directory: %v", err)
+	}
+
+	filePath := fmt.Sprintf("%s/%s", homeDir, path)
+
+	fileContent, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading file: %v", err)
+	}
+	return fileContent, nil
 }
