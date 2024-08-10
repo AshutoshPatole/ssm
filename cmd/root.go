@@ -4,6 +4,7 @@ package cmd
 import (
 	"github.com/sirupsen/logrus"
 	"os"
+	"ssm-v2/internal/store"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -43,16 +44,14 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssm-v2.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "toggle debug logs")
+
+	// firebase init
+	err := store.InitFirebase()
+	if err != nil {
+		return
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"ssm-v2/internal/store"
 )
 
 // syncCmd represents the sync command
@@ -16,8 +15,4 @@ var syncCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(syncCmd)
-	err := store.InitFirebase()
-	if err != nil {
-		return
-	}
 }
