@@ -1,7 +1,12 @@
 package cmd
 
 import (
+	"cloud.google.com/go/firestore"
+	"context"
+	firebase "firebase.google.com/go"
 	"fmt"
+	"log"
+	"ssm-v2/internal/store"
 
 	"github.com/spf13/cobra"
 )
@@ -13,19 +18,28 @@ var pullCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("pull called")
+		if store.App == nil {
+			fmt.Println("Firebase app is not initialized. Please run the sync command first.")
+			return
+		}
+		//test(store.App)
 	},
 }
 
 func init() {
 	syncCmd.AddCommand(pullCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func test(app *firebase.App) {
+	client, err := app.Firestore(context.Background())
+	if err != nil {
+		log.Fatalf("error getting Firestore client: %v", err)
+	}
+	defer func(client *firestore.Client) {
+		err := client.Close()
+		if err != nil {
+			return
+		}
+	}(client)
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// pullCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// pullCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
