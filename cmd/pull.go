@@ -1,11 +1,7 @@
 package cmd
 
 import (
-	"cloud.google.com/go/firestore"
-	"context"
-	firebase "firebase.google.com/go"
 	"fmt"
-	"log"
 	"ssm-v2/internal/store"
 
 	"github.com/spf13/cobra"
@@ -28,18 +24,4 @@ var pullCmd = &cobra.Command{
 
 func init() {
 	syncCmd.AddCommand(pullCmd)
-}
-
-func test(app *firebase.App) {
-	client, err := app.Firestore(context.Background())
-	if err != nil {
-		log.Fatalf("error getting Firestore client: %v", err)
-	}
-	defer func(client *firestore.Client) {
-		err := client.Close()
-		if err != nil {
-			return
-		}
-	}(client)
-
 }

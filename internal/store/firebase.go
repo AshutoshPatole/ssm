@@ -113,7 +113,6 @@ func parseToken(tokenString string) map[string]interface{} {
 	if err != nil {
 		log.Fatalf("Error parsing token: %v", err)
 	}
-	fmt.Println(token)
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		result := make(map[string]interface{})
 		if email, ok := claims["email"]; ok {
