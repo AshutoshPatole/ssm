@@ -21,8 +21,10 @@ var (
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "A brief description of your command",
-	Long:  ``,
+	Short: "Add a new SSH server configuration to your profile.",
+	Long: `This command allows you to add a new SSH server configuration to your profile. 
+
+You can specify the hostname, username, group, environment, and other optional settings such as alias and dotfiles configuration.`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return errors.New(color.InRed("Requires hostname of the machine"))

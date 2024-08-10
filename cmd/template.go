@@ -13,8 +13,11 @@ import (
 // templateCmd represents the template command
 var templateCmd = &cobra.Command{
 	Use:   "template",
-	Short: "A brief description of your command",
-	Long:  ``,
+	Short: "Generate and save a template YAML configuration file.",
+	Long: `This command generates a template YAML configuration file with example SSH groups, environments, and server settings.
+The template is then saved to your home directory as '.ssm-template.yaml'. 
+This file can be used as a starting point for importing your SSH profiles.`,
+
 	Run: func(cmd *cobra.Command, args []string) {
 		saveTemplate()
 	},
