@@ -16,7 +16,7 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "ssm-v2",
+	Use:   "ssm",
 	Short: "A brief description of your application",
 	Long:  ``,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
