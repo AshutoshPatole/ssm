@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"os"
+	"ssm-v2/internal/ssh"
 	"ssm-v2/internal/store"
 )
 
@@ -17,6 +18,7 @@ var pushCmd = &cobra.Command{
 	Short: "Push your configuration to the cloud",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		userPassword, _ := ssh.AskPassword()
 		user, err := store.LoginUser(userEmail, userPassword)
 		if err != nil {
 			fmt.Println(err)
