@@ -18,6 +18,12 @@ var pullCmd = &cobra.Command{
 	Use:   "pull",
 	Short: "Pull your configurations from the cloud",
 	Long:  ``,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Initialize Firebase here
+		if err := store.InitFirebase(); err != nil {
+			logrus.Fatalln("Failed to initialize Firebase:", err)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if store.App == nil {
@@ -35,12 +41,12 @@ func init() {
 func downloadConfigurations() {
 	client, err := store.App.Firestore(context.Background())
 	if err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 	defer func(client *firestore.Client) {
 		err := client.Close()
 		if err != nil {
-			panic(err)
+			logrus.Fatal(err)
 		}
 	}(client)
 
@@ -58,7 +64,7 @@ func downloadConfigurations() {
 
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 	yaml := document.Data()["ssm_yaml"].([]byte)
 	publicKey := document.Data()["public"].([]byte)
@@ -80,7 +86,7 @@ func fetchUID() string {
 	userPassword, _ := ssh.AskPassword()
 	userMap, err := store.LoginUser(userEmail, userPassword)
 	if err != nil {
-		panic(err)
+		logrus.Fatal(err)
 	}
 	userId := userMap["user_id"].(string)
 	return userId

@@ -17,6 +17,12 @@ var registerCmd = &cobra.Command{
 	Use:   "register",
 	Short: "Register a user for ssm",
 	Long:  ``,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Initialize Firebase here
+		if err := store.InitFirebase(); err != nil {
+			logrus.Fatalln("Failed to initialize Firebase:", err)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		password, _ := ssh.AskPassword()
 		user, err := store.RegisterUser(email, password)
@@ -31,5 +37,4 @@ func init() {
 	authCmd.AddCommand(registerCmd)
 	registerCmd.Flags().StringVarP(&email, "email", "e", "", "email address")
 	_ = registerCmd.MarkFlagRequired("email")
-
 }

@@ -17,6 +17,12 @@ var pushCmd = &cobra.Command{
 	Use:   "push",
 	Short: "Push your configuration to the cloud",
 	Long:  ``,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Initialize Firebase here
+		if err := store.InitFirebase(); err != nil {
+			logrus.Fatalln("Failed to initialize Firebase:", err)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		userPassword, _ := ssh.AskPassword()
 		user, err := store.LoginUser(userEmail, userPassword)
