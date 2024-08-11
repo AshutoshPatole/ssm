@@ -18,8 +18,9 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ssm",
-	Short: "A brief description of your application",
-	Long:  ``,
+	Short: "Simple SSH Manager with additional capabilities",
+	Long: `SSM (Simple SSH Manager) is a versatile command-line tool for managing SSH connections and user authentication. 
+It simplifies the management of SSH profiles with commands to register users, import configurations, connect to remote servers, and synchronize settings across devices`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if verbose {
 			logrus.Debugln("Debug level enabled")
@@ -84,7 +85,7 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".ssm-v2" (without extension).
+		// Search config in home directory with name ".ssm" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".ssm.yaml")
