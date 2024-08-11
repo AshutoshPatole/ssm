@@ -14,7 +14,7 @@ import (
 // pushCmd represents the push command
 var pushCmd = &cobra.Command{
 	Use:   "push",
-	Short: "A brief description of your command",
+	Short: "Push your configuration to the cloud",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		user, err := store.LoginUser(userEmail, userPassword)
