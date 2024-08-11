@@ -15,7 +15,7 @@ var (
 // registerCmd represents the register command
 var registerCmd = &cobra.Command{
 	Use:   "register",
-	Short: "A brief description of your command",
+	Short: "Register a user for ssm",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		user, err := store.RegisterUser(email, password)
