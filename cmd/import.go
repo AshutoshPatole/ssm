@@ -56,20 +56,15 @@ func readFile() {
 	if allGroup {
 		for _, group := range config.Groups {
 			fmt.Println("Importing ", group.Name)
-			password, err := ssh.AskPassword()
 			if err != nil {
 				logrus.Fatalln(err)
 				return
 			}
 			for _, environment := range group.Environment {
 				for _, host := range environment.Servers {
-					if host.User == group.User {
-						ssh.InitSSHConnection(host.User, password, host.HostName, group.Name, environment.Name, host.Alias, setupDotFile)
-					} else {
-						logrus.Info("User %s for %s does not matches with group user %s", host.User, host.HostName, group.User)
-						newPassword, _ := ssh.AskPassword()
-						ssh.InitSSHConnection(host.User, newPassword, host.HostName, group.Name, environment.Name, host.Alias, setupDotFile)
-					}
+					newPassword, _ := ssh.AskPassword()
+					ssh.InitSSHConnection(host.User, newPassword, host.HostName, group.Name, environment.Name, host.Alias, setupDotFile)
+
 				}
 			}
 		}
