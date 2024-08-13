@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
+	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"ssm-v2/internal/ssh"
-	"ssm-v2/internal/store"
 )
 
 var (

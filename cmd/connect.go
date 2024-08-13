@@ -4,13 +4,13 @@ package cmd
 import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
+	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log"
 	"os"
-	"ssm-v2/internal/ssh"
-	"ssm-v2/internal/store"
 	"strings"
 )
 

@@ -4,12 +4,12 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
-	"ssm-v2/internal/store"
 	"strings"
 )
 

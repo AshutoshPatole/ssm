@@ -4,12 +4,12 @@ import (
 	"cloud.google.com/go/firestore"
 	"context"
 	"fmt"
+	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
+	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
-	"ssm-v2/internal/ssh"
-	"ssm-v2/internal/store"
 )
 
 // pushCmd represents the push command

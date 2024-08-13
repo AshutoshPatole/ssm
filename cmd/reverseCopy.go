@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	ssh2 "github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/TwiN/go-color"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -12,7 +13,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	ssh2 "ssm-v2/internal/ssh"
 	"strings"
 )
 

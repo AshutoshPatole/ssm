@@ -4,9 +4,6 @@ before:
   hooks:
     - go mod tidy
     - go generate ./...
-git:
-  ignore_tags:
-    - "{{ if not .IsNightly }}nightly{{ end }}"
 
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
@@ -28,7 +25,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{ .CommitDate }} -X main.builtBy=Ashutosh -X main.treeState={{ .IsGitDirty }}
+      - -s -w -X github.com/AshutoshPatole/ssm-v2/cmd.version={{.Version}} -X github.com/AshutoshPatole/ssm-v2/cmd.commit={{.Commit}} -X github.com/AshutoshPatole/ssm-v2/cmd.date={{ .CommitDate }} -X github.com/AshutoshPatole/ssm-v2/cmd.builtBy={{ .CommitTimestamp }} -X github.com/AshutoshPatole/ssm-v2/cmd.treeState={{ .IsGitDirty }}
 
 
 archives:
@@ -50,3 +47,39 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+
+# .goreleaser.yaml
+nfpms:
+  -
+    id: ssmv2
+    package_name: ssm
+
+    file_name_template: "{{ .ConventionalFileName }}"
+
+    vendor: AshutoshPatole
+
+    # Your app's homepage.
+    #
+    # Default: inferred from global metadata.
+    homepage: https://github.com/AshutoshPatole/ssm-v2
+
+    # Your app's maintainer (probably you).
+    #
+    # Default: inferred from global metadata.
+    maintainer: AshutoshPatole <apatole479@gmail.com>
+
+    # Your app's description.
+    #
+    # Default: inferred from global metadata.
+    description: |-
+      A simple SSH manager utility
+
+    # Formats to be generated.
+    formats:
+      - deb
+      - rpm
+
+
+
+

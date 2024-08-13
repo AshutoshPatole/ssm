@@ -3,11 +3,11 @@ package cmd
 import (
 	"cloud.google.com/go/firestore"
 	"fmt"
+	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
+	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/sirupsen/logrus"
 	"os"
 	"path"
-	"ssm-v2/internal/ssh"
-	"ssm-v2/internal/store"
 
 	"context"
 	"github.com/spf13/cobra"
