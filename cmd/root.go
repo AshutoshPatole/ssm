@@ -15,8 +15,15 @@ import (
 var (
 	cfgFile     string
 	verbose     bool
-	version     = "dev"
 	showVersion bool
+)
+
+var (
+	version   = ""
+	commit    = ""
+	treeState = ""
+	date      = ""
+	builtBy   = ""
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -34,7 +41,7 @@ It simplifies the management of SSH profiles with commands to register users, im
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Version:", version)
+		buildVersion(version, commit, date, builtBy, treeState)
 	},
 }
 
@@ -116,4 +123,17 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		logrus.Debugf("Using config file: %s", viper.ConfigFileUsed())
 	}
+}
+
+//go:embed art.txt
+var asciiArt string
+
+func buildVersion(version, commit, date, builtBy, treeState string) {
+
+	fmt.Println(asciiArt)
+	fmt.Printf("Version: %s\n", version)
+	fmt.Printf("Commit: %s\n", commit)
+	fmt.Printf("Built by: %s\n", builtBy)
+	fmt.Printf("TreeState: %s\n", treeState)
+	fmt.Printf("Build Date: %s\n", date)
 }
