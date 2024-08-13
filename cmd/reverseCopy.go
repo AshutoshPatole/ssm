@@ -73,7 +73,7 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		_ = session.Close()
 	}(session)
 
-	output, err := session.Output("ls -l " + remoteDir + " | awk '{print $1 \" \" $5 \" \" $9}'")
+	output, err := session.Output("ls -l " + remoteDir + " | grep -v '^total' | awk '{print $1, substr($0, index($0,$9))}'")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files: %w", err)
 	}
@@ -84,9 +84,9 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, " ", 3)
+		parts := strings.SplitN(line, " ", 2)
 		isDir := parts[0][0] == 'd'
-		files = append(files, FileInfo{Name: parts[2], IsDir: isDir, Path: filepath.Join(remoteDir, parts[2])})
+		files = append(files, FileInfo{Name: parts[1], IsDir: isDir, Path: filepath.Join(remoteDir, parts[1])})
 	}
 
 	return files, nil
