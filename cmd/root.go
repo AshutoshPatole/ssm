@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
+	"path/filepath"
 )
 
 var (
@@ -94,10 +95,22 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
+		// generate .ssm.yaml if it is not present
+		configName := ".ssm.yaml"
+		configFile := filepath.Join(home, configName)
+
+		if _, err := os.Stat(configFile); os.IsNotExist(err) {
+			file, err := os.Create(configFile)
+			cobra.CheckErr(err)
+			defer func(file *os.File) {
+				_ = file.Close()
+			}(file)
+		}
+
 		// Search config in home directory with name ".ssm" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".ssm.yaml")
+		viper.SetConfigName(configName)
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
