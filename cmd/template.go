@@ -2,12 +2,13 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 // templateCmd represents the template command

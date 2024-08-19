@@ -4,13 +4,14 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"strings"
 )
 
 var (
@@ -43,14 +44,14 @@ func cleanConfiguration(config *store.Config) {
 			env := &group.Environment[ei]
 			if len(env.Servers) == 0 {
 				group.Environment = append(group.Environment[:ei], group.Environment[ei+1:]...)
-				logrus.Debugln("Removed empty environment: %s", env.Name)
+				logrus.Debugf("Removed empty environment: %s\n", env.Name)
 			} else {
 				logrus.Debugln("Nothing to clean")
 			}
 		}
 		if len(group.Environment) == 0 {
 			config.Groups = append(config.Groups[:gi], config.Groups[gi+1:]...)
-			logrus.Debugln("Removed empty group: %s", group.Name)
+			logrus.Debugf("Removed empty group: %s\n", group.Name)
 		}
 	}
 }

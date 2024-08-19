@@ -3,17 +3,18 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+
 	ssh2 "github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/TwiN/go-color"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"io"
-	"log"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 var filterByEnvironment string

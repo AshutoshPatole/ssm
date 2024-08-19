@@ -3,13 +3,14 @@ package cmd
 
 import (
 	"embed"
+	"os"
+	"path/filepath"
+
 	goversion "github.com/caarlos0/go-version"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"path/filepath"
 )
 
 var (

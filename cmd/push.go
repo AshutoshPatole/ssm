@@ -1,15 +1,16 @@
 package cmd
 
 import (
-	"cloud.google.com/go/firestore"
 	"context"
 	"fmt"
+	"log"
+	"os"
+
+	"cloud.google.com/go/firestore"
 	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"log"
-	"os"
 )
 
 // pushCmd represents the push command
