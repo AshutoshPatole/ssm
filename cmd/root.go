@@ -3,9 +3,11 @@ package cmd
 
 import (
 	"embed"
+	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/TwiN/go-color"
 	goversion "github.com/caarlos0/go-version"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -51,6 +53,11 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
+	isUpdateAvailable, _, latestVersion := CheckForUpdates()
+	if isUpdateAvailable {
+		fmt.Println(color.InGreen("New Update Available"), color.InBold(color.InGreen(latestVersion)))
+		return
+	}
 }
 
 //go:embed .env.production
@@ -86,7 +93,6 @@ func init() {
 		return
 	}
 
-	CheckForUpdates()
 }
 
 // initConfig reads in config file and ENV variables if set.

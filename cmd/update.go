@@ -25,7 +25,12 @@ var updateCmd = &cobra.Command{
 	Short: "checks for latest update",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		CheckForUpdates()
+		updateAvailable, latestRelease, latestVersion := CheckForUpdates()
+		if updateAvailable {
+			startUpgrade(latestRelease, latestVersion)
+		} else {
+			fmt.Println("You are already using the latest version.")
+		}
 	},
 }
 
@@ -33,7 +38,7 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 }
 
-func CheckForUpdates() {
+func CheckForUpdates() (bool, *GitHubRelease, *semver.Version) {
 	currentVersion, err := semver.NewVersion(version)
 	if err != nil {
 		logrus.Fatalf("Error parsing current version: %s\n", err)
@@ -48,18 +53,22 @@ func CheckForUpdates() {
 	if err != nil {
 		logrus.Fatalf("Error parsing latest version: %s\n", err)
 	}
-	if latestVersion.GreaterThan(currentVersion) {
-		fmt.Println(asciiArt)
-		fmt.Printf("Current version: %s\n", currentVersion)
-		fmt.Printf("New version available: %s\n", latestVersion)
-		fmt.Println("https://github.com/AshutoshPatole/ssm-v2/releases")
 
-		fmt.Print("Do you want to download the update? (y/n): ")
-		var answer string
-		fmt.Scanln(&answer)
-		if strings.ToLower(answer) == "y" {
-			downloadUpdate(latestRelease)
-		}
+	return latestVersion.GreaterThan(currentVersion), latestRelease, latestVersion
+}
+
+func startUpgrade(latestRelease *GitHubRelease, latestVersion *semver.Version) {
+
+	fmt.Println(asciiArt)
+	fmt.Printf("Current version: %s\n", version)
+	fmt.Printf("New version available: %s\n", latestVersion)
+	fmt.Println("https://github.com/AshutoshPatole/ssm-v2/releases")
+
+	fmt.Print("Do you want to download the update? (y/n): ")
+	var answer string
+	fmt.Scanln(&answer)
+	if strings.ToLower(answer) == "y" {
+		downloadUpdate(latestRelease)
 	}
 }
 
@@ -162,7 +171,7 @@ func upgrade(downloadURL string, assetName string) {
 		if err := handleWindowsUpdate(archivePath); err != nil {
 			logrus.Fatalf("Error updating on Windows: %s", err)
 		}
-		return
+		os.Exit(0)
 	}
 
 	if runtime.GOOS == "linux" {
@@ -174,9 +183,10 @@ func upgrade(downloadURL string, assetName string) {
 		if err := installBinary(binaryPath); err != nil {
 			logrus.Fatalf("Error installing update: %s", err)
 		}
+		fmt.Println("Update successfully installed to /usr/local/bin")
+		os.Exit(0)
 	}
 
-	fmt.Println("Update successfully installed to /usr/local/bin")
 }
 
 func downloadFile(url, filepath string) error {
