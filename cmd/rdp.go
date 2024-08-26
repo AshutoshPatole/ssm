@@ -76,15 +76,13 @@ func ConnectToServerRDP(user, host, password string) {
 
 	var cmd *exec.Cmd
 
-	cmd = exec.Command("xfreerdp",
+	args := []string{
 		fmt.Sprintf("/u:%s", user),
 		fmt.Sprintf("/p:%s", string(password)),
 		fmt.Sprintf("/v:%s", host),
 		"+clipboard",
 		"/dynamic-resolution",
 		"/compression-level:2",
-		"/log-level:TRACE",
-		"/log-filters:*:TRACE",
 		"/scale:100",
 		"/scale-desktop:100",
 		"/f",
@@ -92,10 +90,19 @@ func ConnectToServerRDP(user, host, password string) {
 		"/disp",
 		"/gdi:hw",
 		"/sound",
-		"/video")
+		"/video",
+	}
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	if verbose {
+		args = append(args, "/log-level:TRACE", "/log-filters:*:TRACE")
+	}
+
+	cmd = exec.Command("xfreerdp", args...)
+
+	if verbose {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 
 	fmt.Println(color.InGreen("Attempting full connection..."))
 	err = cmd.Run()
