@@ -2,8 +2,8 @@ package ssh
 
 import (
 	"fmt"
+
 	"github.com/AshutoshPatole/ssm-v2/internal/configuration"
-	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -35,7 +35,6 @@ func InitSSHConnection(user, password, host, group, environment, alias string, s
 	}(client)
 
 	AddPublicKeys(client)
-	store.Save(group, environment, host, user, alias)
 	if setupDotFiles {
 		configuration.Setup(client, user)
 	}

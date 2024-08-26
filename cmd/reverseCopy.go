@@ -33,7 +33,7 @@ var reverseCopyCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		user, host, err := ListToConnectServers(args[0], filterByEnvironment)
+		user, host, _, _, err := ListToConnectServers(args[0], filterByEnvironment)
 		if err != nil {
 			return
 		}

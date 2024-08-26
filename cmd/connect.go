@@ -11,16 +11,19 @@ import (
 	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 type serverOption struct {
-	Label       string
-	Environment string
-	HostName    string
-	User        string
-	IP          string
+	Label         string
+	Environment   string
+	HostName      string
+	User          string
+	IP            string
+	IsRDP         bool
+	CredentialKey string
 }
 
 var filterEnvironment string
@@ -45,9 +48,13 @@ ssm connect group-name -e ppd
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		user, host, err := ListToConnectServers(args[0], filterEnvironment)
+		user, host, _, isRDP, err := ListToConnectServers(args[0], filterEnvironment)
 		if err != nil {
 			log.Fatal(err)
+		}
+		if isRDP {
+			logrus.Infoln("TODO: Combine both rdp and connect into one")
+			return
 		}
 		ConnectToServer(user, host)
 	},
@@ -58,7 +65,7 @@ func init() {
 	connectCmd.Flags().StringVarP(&filterEnvironment, "filter", "f", "", "filter list by environment")
 }
 
-func ListToConnectServers(group, environment string) (string, string, error) {
+func ListToConnectServers(group, environment string) (string, string, string, bool, error) {
 	var config store.Config
 
 	if err := viper.Unmarshal(&config); err != nil {
@@ -71,6 +78,8 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 
 	var serverOptions []serverOption
 	user := ""
+	isRDP := false
+	credentialKey := ""
 
 	for _, grp := range config.Groups {
 		if grp.Name == group {
@@ -79,11 +88,13 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 					if environment == env.Name {
 						for _, server := range env.Servers {
 							serverOption := serverOption{
-								Label:       fmt.Sprintf("%s (%s)", server.Alias, env.Name),
-								Environment: env.Name,
-								HostName:    server.HostName,
-								IP:          server.IP,
-								User:        server.User,
+								Label:         fmt.Sprintf("%s (%s)", server.Alias, env.Name),
+								Environment:   env.Name,
+								HostName:      server.HostName,
+								IP:            server.IP,
+								User:          server.User,
+								IsRDP:         server.IsRDP,
+								CredentialKey: server.Password,
 							}
 							serverOptions = append(serverOptions, serverOption)
 						}
@@ -91,11 +102,13 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 				} else {
 					for _, server := range env.Servers {
 						serverOption := serverOption{
-							Label:       fmt.Sprintf("%s (%s)", server.Alias, env.Name),
-							Environment: env.Name,
-							HostName:    server.HostName,
-							IP:          server.IP,
-							User:        server.User,
+							Label:         fmt.Sprintf("%s (%s)", server.Alias, env.Name),
+							Environment:   env.Name,
+							HostName:      server.HostName,
+							IP:            server.IP,
+							User:          server.User,
+							IsRDP:         server.IsRDP,
+							CredentialKey: server.Password,
 						}
 						serverOptions = append(serverOptions, serverOption)
 					}
@@ -115,7 +128,7 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 	}
 	err := survey.AskOne(prompt, &selectedHostName)
 	if err != nil {
-		return "", "", err
+		return "", "", "", false, err
 	}
 
 	// Extract environment name from the selected option
@@ -125,6 +138,8 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 			selectedHostName = strings.Split(serverOption.HostName, " (")[0]
 			selectedHostIP = serverOption.IP
 			user = serverOption.User
+			isRDP = serverOption.IsRDP
+			credentialKey = serverOption.CredentialKey
 			break
 		}
 	}
@@ -137,10 +152,10 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "Environment", colonWidth, selectedEnvName)))
 
 		//ssh.Connect(user, selectedHostIP)
-		return user, selectedHostIP, nil
+		return user, selectedHostIP, credentialKey, isRDP, nil
 	} else {
 		fmt.Println(color.InRed("Aborted! Bad Request"))
-		return "", "", err
+		return "", "", "", false, err
 	}
 }
 

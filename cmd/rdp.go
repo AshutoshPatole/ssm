@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/AshutoshPatole/ssm-v2/internal/security"
 	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
@@ -37,15 +38,18 @@ ssm rdp group-name -f ppd
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 
-		user, hostIP, err := ListToConnectServers(args[0], rdpFilterEnvironment)
+		user, hostIP, credentialKey, isRDP, err := ListToConnectServers(args[0], rdpFilterEnvironment)
 		if err != nil {
 			logrus.Fatalln(err)
 		}
 
-		rdpPassword, _ := ssh.AskPassword()
+		if !isRDP {
+			logrus.Fatalln(color.InRed("Selected server is not configured for RDP"))
+		}
+
 		logrus.Debugf("Connecting to Windows machine %s using %s user\n", hostIP, user)
 
-		ConnectToServerRDP(user, hostIP, rdpPassword)
+		ConnectToServerRDP(user, hostIP, credentialKey)
 	},
 }
 
@@ -54,7 +58,7 @@ func init() {
 	rdpCmd.Flags().StringVarP(&rdpFilterEnvironment, "filter", "f", "", "filter list by environment")
 }
 
-func ConnectToServerRDP(user, host, password string) {
+func ConnectToServerRDP(user, host, credentialKey string) {
 	if runtime.GOOS != "linux" {
 		logrus.Error("This function is only supported on Linux")
 		return
@@ -69,6 +73,26 @@ func ConnectToServerRDP(user, host, password string) {
 	if os.Getenv("DISPLAY") == "" {
 		logrus.Warnln(color.InYellow("DISPLAY environment variable is not set. X11 forwarding might not be configured correctly."))
 		return
+	}
+
+	var password string
+	if credentialKey != "" {
+		retrievedPassword, err := security.RetreiveCredentials(credentialKey)
+		if err != nil {
+			logrus.Warn(color.InYellow("Error retrieving stored credential: " + err.Error()))
+			password, err = ssh.AskPassword()
+			if err != nil {
+				logrus.Fatal(color.InRed("Error reading password"))
+			}
+		} else {
+			password = retrievedPassword
+		}
+	} else {
+		var err error
+		password, err = ssh.AskPassword()
+		if err != nil {
+			logrus.Fatal(color.InRed("Error reading password"))
+		}
 	}
 
 	// Add a delay to ensure environment is set

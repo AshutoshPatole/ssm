@@ -1,16 +1,17 @@
 package store
 
 import (
+	"log"
+	"net"
+
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"log"
-	"net"
 )
 
 var c Config
 
-func Save(group, environment, host, user, alias string) {
+func Save(group, environment, host, user, alias, password string, isRDP bool) {
 	err := viper.Unmarshal(&c)
 	if err != nil {
 		logrus.Fatal(color.InRed(err.Error()))
@@ -41,6 +42,8 @@ func Save(group, environment, host, user, alias string) {
 		IP:       getIP(host),
 		Alias:    alias,
 		User:     user,
+		IsRDP:    isRDP,
+		Password: password,
 	}
 
 	env := Env{

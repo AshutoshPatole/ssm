@@ -5,6 +5,8 @@ type Server struct {
 	IP       string `yaml:"ip"`
 	Alias    string `yaml:"alias"`
 	User     string `yaml:"user"`
+	Password string `yaml:"password,omitempty"`
+	IsRDP    bool   `yaml:"isRDP,omitempty"`
 }
 
 type Env struct {
