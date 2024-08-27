@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/TwiN/go-color"
 	goversion "github.com/caarlos0/go-version"
@@ -22,7 +23,7 @@ var (
 )
 
 var (
-	version   = "0.1.2"
+	version   = "0.0.0"
 	commit    = ""
 	treeState = ""
 	date      = ""
@@ -33,14 +34,33 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "ssm",
 	Short: "Simple SSH Manager with additional capabilities",
-	Long: `SSM (Simple SSH Manager) is a versatile command-line tool for managing SSH connections and user authentication. 
+	Long: `SSM (Simple SSH Manager) is a versatile command-line tool for managing SSH connections and user authentication.
 It simplifies the management of SSH profiles with commands to register users, import configurations, connect to remote servers, and synchronize settings across devices`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if verbose {
-			logrus.Debugln("Debug level enabled")
+			logrus.SetOutput(os.Stdout)
 			logrus.SetLevel(logrus.DebugLevel)
+			logrus.Debugln("Debug level enabled, logging to stdout")
 		} else {
+			logFile, err := setupLogFile()
+			if err != nil {
+				fmt.Printf("Failed to set up log file: %v\n", err)
+				fmt.Println("Falling back to stdout logging")
+				logrus.SetOutput(os.Stdout)
+			} else {
+				logrus.SetOutput(logFile)
+			}
 			logrus.SetLevel(logrus.InfoLevel)
+		}
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		// Close the log file if it's not stdout
+		if !verbose {
+			if f, ok := logrus.StandardLogger().Out.(*os.File); ok {
+				if f != os.Stdout {
+					_ = f.Close()
+				}
+			}
 		}
 	},
 	Version: buildVersion(version, commit, date, builtBy, treeState).String(),
@@ -134,17 +154,6 @@ func initConfig() {
 //go:embed art.txt
 var asciiArt string
 
-//func buildVersion(version, commit, date, builtBy, treeState string) {
-//
-//	fmt.Println(asciiArt)
-//	fmt.Printf("Version: %s\n", version)
-//	fmt.Printf("Commit: %s\n", commit)
-//	fmt.Printf("Built by: %s\n", builtBy)
-//	fmt.Printf("TreeState: %s\n", treeState)
-//	fmt.Printf("Build Date: %s\n", date)
-//
-//}
-
 func buildVersion(version, commit, date, builtBy, treeState string) goversion.Info {
 	return goversion.GetVersionInfo(
 		goversion.WithAppDetails("ssm", "Simple SSH Manager", "https://github.com/AshutoshPatole/ssm-v2"),
@@ -167,4 +176,31 @@ func buildVersion(version, commit, date, builtBy, treeState string) goversion.In
 			}
 		},
 	)
+}
+
+func setupLogFile() (*os.File, error) {
+	var logFilePath string
+	if runtime.GOOS == "windows" {
+		programData := os.Getenv("PROGRAMDATA")
+		if programData == "" {
+			programData = "C:\\ProgramData"
+		}
+		logFilePath = filepath.Join(programData, "SSM", "ssm.log")
+	} else {
+		logFilePath = "/var/log/ssm.log"
+	}
+
+	// Ensure the directory exists
+	err := os.MkdirAll(filepath.Dir(logFilePath), 0755)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create log directory: %v", err)
+	}
+
+	// Open the log file
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open log file: %v", err)
+	}
+
+	return logFile, nil
 }

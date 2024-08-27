@@ -26,7 +26,7 @@ func Connect(user, server string) {
 	var sshCmd *exec.Cmd
 	switch runtime.GOOS {
 	case "linux":
-		sshCmd = exec.Command("ssh -X", user+"@"+server)
+		sshCmd = exec.Command("ssh", "-X", user+"@"+server)
 	case "darwin":
 		sshCmd = exec.Command("ssh", user+"@"+server)
 	case "windows":
