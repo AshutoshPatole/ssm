@@ -3,7 +3,7 @@ package ssh
 import (
 	"fmt"
 
-	"github.com/AshutoshPatole/ssm-v2/internal/configuration"
+	"github.com/AshutoshPatole/ssm/internal/configuration"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"

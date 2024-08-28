@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
-	"github.com/AshutoshPatole/ssm-v2/internal/store"
+	"github.com/AshutoshPatole/ssm/internal/ssh"
+	"github.com/AshutoshPatole/ssm/internal/store"
 	"github.com/TwiN/go-color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

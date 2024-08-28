@@ -6,16 +6,17 @@ import (
 	"embed"
 	_ "embed"
 	"encoding/json"
-	"firebase.google.com/go"
-	"firebase.google.com/go/auth"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/sirupsen/logrus"
-	"google.golang.org/api/option"
 	"io"
 	"log"
 	"net/http"
 	"os"
+
+	firebase "firebase.google.com/go"
+	"firebase.google.com/go/auth"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/api/option"
 )
 
 var App *firebase.App
