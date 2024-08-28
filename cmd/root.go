@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/TwiN/go-color"
 	goversion "github.com/caarlos0/go-version"
@@ -20,9 +19,7 @@ var (
 	cfgFile     string
 	verbose     bool
 	showVersion bool
-)
 
-var (
 	version   = "0.0.0"
 	commit    = ""
 	treeState = ""
@@ -38,18 +35,9 @@ var rootCmd = &cobra.Command{
 It simplifies the management of SSH profiles with commands to register users, import configurations, connect to remote servers, and synchronize settings across devices`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if verbose {
-			logrus.SetOutput(os.Stdout)
 			logrus.SetLevel(logrus.DebugLevel)
-			logrus.Debugln("Debug level enabled, logging to stdout")
+			logrus.Debugln("Debug level enabled")
 		} else {
-			logFile, err := setupLogFile()
-			if err != nil {
-				fmt.Printf("Failed to set up log file: %v\n", err)
-				fmt.Println("Falling back to stdout logging")
-				logrus.SetOutput(os.Stdout)
-			} else {
-				logrus.SetOutput(logFile)
-			}
 			logrus.SetLevel(logrus.InfoLevel)
 		}
 	},
@@ -176,40 +164,4 @@ func buildVersion(version, commit, date, builtBy, treeState string) goversion.In
 			}
 		},
 	)
-}
-
-func setupLogFile() (*os.File, error) {
-	var logFilePath string
-	if runtime.GOOS == "windows" {
-		programData := os.Getenv("PROGRAMDATA")
-		if programData == "" {
-			programData = "C:\\ProgramData"
-		}
-		logFilePath = filepath.Join(programData, "SSM", "ssm.log")
-	} else {
-		// Use XDG Base Directory Specification for Linux
-		xdgDataHome := os.Getenv("XDG_DATA_HOME")
-		if xdgDataHome == "" {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get user home directory: %v", err)
-			}
-			xdgDataHome = filepath.Join(homeDir, ".local", "share")
-		}
-		logFilePath = filepath.Join(xdgDataHome, "ssm", "logs", "ssm.log")
-	}
-
-	// Ensure the directory exists
-	err := os.MkdirAll(filepath.Dir(logFilePath), 0755)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create log directory: %v", err)
-	}
-
-	// Open the log file
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open log file: %v", err)
-	}
-
-	return logFile, nil
 }
