@@ -24,7 +24,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X github.com/AshutoshPatole/ssm-v2/cmd.version={{.Version}} -X github.com/AshutoshPatole/ssm-v2/cmd.commit={{.Commit}} -X github.com/AshutoshPatole/ssm-v2/cmd.date={{ .CommitDate }} -X github.com/AshutoshPatole/ssm-v2/cmd.builtBy={{ .AshutoshPatole}} -X github.com/AshutoshPatole/ssm-v2/cmd.treeState={{ .IsGitDirty }}
+      - -s -w -X github.com/AshutoshPatole/ssm/cmd.version={{.Version}} -X github.com/AshutoshPatole/ssm/cmd.commit={{.Commit}} -X github.com/AshutoshPatole/ssm/cmd.date={{ .CommitDate }} -X github.com/AshutoshPatole/ssm/cmd.builtBy=AshutoshPatole -X github.com/AshutoshPatole/ssm/cmd.treeState={{ .IsGitDirty }}
 
 archives:
   - format: tar.gz
@@ -59,7 +59,7 @@ nfpms:
     # Your app's homepage.
     #
     # Default: inferred from global metadata.
-    homepage: https://github.com/AshutoshPatole/ssm-v2
+    homepage: https://github.com/AshutoshPatole/ssm
 
     # Your app's maintainer (probably you).
     #
