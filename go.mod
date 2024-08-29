@@ -18,6 +18,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/zalando/go-keyring v0.2.5
 	golang.org/x/crypto v0.25.0
+	golang.org/x/term v0.22.0
 	google.golang.org/api v0.191.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -86,7 +87,6 @@ require (
 	golang.org/x/oauth2 v0.22.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
-	golang.org/x/term v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect

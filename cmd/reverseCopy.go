@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/term"
 )
 
 var filterByEnvironment string
@@ -164,17 +165,21 @@ type model struct {
 	cursor         int
 	status         string
 	downloading    bool
-	directoryStack []string // Stack to maintain navigation history
+	directoryStack []string
+	scrollOffset   int
+	windowHeight   int
 }
 
 func initialModel(client *ssh.Client, files []FileInfo) model {
+	_, h, _ := term.GetSize(int(os.Stdout.Fd()))
 	return model{
 		client:         client,
 		files:          files,
 		selected:       make(map[int]struct{}),
 		cursor:         0,
 		status:         "Select files to download",
-		directoryStack: []string{"."}, // Start at the root directory
+		directoryStack: []string{"."},
+		windowHeight:   h,
 	}
 }
 func (m model) Init() tea.Cmd {
@@ -184,6 +189,10 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
+	case tea.WindowSizeMsg:
+		m.windowHeight = msg.Height
+		return m, nil
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -192,11 +201,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up", "k":
 			if m.cursor > 0 {
 				m.cursor--
+				if m.cursor < m.scrollOffset {
+					m.scrollOffset = m.cursor
+				}
 			}
 
 		case "down", "j":
 			if m.cursor < len(m.files)-1 {
 				m.cursor++
+				if m.cursor >= m.scrollOffset+m.getViewportHeight() {
+					m.scrollOffset = m.cursor - m.getViewportHeight() + 1
+				}
 			}
 
 		case " ":
@@ -263,9 +278,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) getViewportHeight() int {
+	// Reserve space for header, status, and instructions
+	reservedLines := 10
+	return max(m.windowHeight-reservedLines, 1)
+}
+
 func (m model) View() string {
 	s := "Files:\n\n"
-	for i, file := range m.files {
+
+	// range of files to display
+	startIdx := m.scrollOffset
+	endIdx := min(startIdx+m.getViewportHeight(), len(m.files))
+
+	for i := startIdx; i < endIdx; i++ {
+		file := m.files[i]
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
@@ -300,6 +327,12 @@ func (m model) View() string {
 	return s
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
 func (m model) selectedFiles() []FileInfo {
 	var files []FileInfo
 	for i := range m.selected {
