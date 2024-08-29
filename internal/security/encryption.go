@@ -14,6 +14,9 @@ func GenerateEncryptionKey(password string) []byte {
 }
 
 func EncryptData(data []byte, key []byte) string {
+	if len(data) == 0 {
+		return ""
+	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Fatalf("error creating cipher: %v", err)

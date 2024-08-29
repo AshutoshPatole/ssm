@@ -8,6 +8,9 @@ import (
 )
 
 func DecryptData(encryptedData string, key []byte) ([]byte, error) {
+	if encryptedData == "" {
+		return nil, nil
+	}
 	data, err := hex.DecodeString(encryptedData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode encrypted data: %v", err)
