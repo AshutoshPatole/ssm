@@ -20,7 +20,7 @@ var (
 	verbose     bool
 	showVersion bool
 
-	version   = "0.1.0"
+	version   = "0.0.0"
 	commit    = ""
 	treeState = ""
 	date      = ""
@@ -39,16 +39,6 @@ It simplifies the management of SSH profiles with commands to register users, im
 			logrus.Debugln("Debug level enabled")
 		} else {
 			logrus.SetLevel(logrus.InfoLevel)
-		}
-	},
-	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		// Close the log file if it's not stdout
-		if !verbose {
-			if f, ok := logrus.StandardLogger().Out.(*os.File); ok {
-				if f != os.Stdout {
-					_ = f.Close()
-				}
-			}
 		}
 	},
 	Version: buildVersion(version, commit, date, builtBy, treeState).String(),
