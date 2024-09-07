@@ -13,6 +13,7 @@ import (
 	"github.com/TwiN/go-color"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/term"
@@ -34,11 +35,19 @@ var reverseCopyCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		user, host, _, _, err := ListToConnectServers(args[0], filterByEnvironment)
+		logrus.Debug("Starting reverse-copy command")
+		user, host, _, isRDP, err := ListToConnectServers(args[0], filterByEnvironment)
 		if err != nil {
+			logrus.Error("Failed to list servers: ", err)
 			return
 		}
 
+		if isRDP {
+			fmt.Println(color.InRed("Reverse copy does not work for Windows machines (RDP connections)."))
+			return
+		}
+
+		logrus.Debug("Creating SSH client for ", user, "@", host)
 		client, _ := ssh2.NewSSHClient(user, host)
 
 		files, err := ListFiles(client, ".")
@@ -46,6 +55,7 @@ var reverseCopyCmd = &cobra.Command{
 			log.Fatalf("Failed to list files: %v", err)
 		}
 
+		logrus.Debug("Starting Bubble Tea program")
 		p := tea.NewProgram(initialModel(client, files))
 
 		if _, err := p.Run(); err != nil {
@@ -67,6 +77,7 @@ type FileInfo struct {
 
 // ListFiles lists files in the given directory on the remote server
 func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
+	logrus.Debug("Listing files in directory: ", remoteDir)
 	session, err := client.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
@@ -91,10 +102,12 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		files = append(files, FileInfo{Name: parts[1], IsDir: isDir, Path: filepath.Join(remoteDir, parts[1])})
 	}
 
+	logrus.Debugf("Found %d files/directories", len(files))
 	return files, nil
 }
 
 func DownloadFile(client *ssh.Client, remoteFile, localFile string, isDir bool) error {
+	logrus.Debug("Downloading file: ", remoteFile)
 	if isDir {
 		return tarAndDownloadDir(client, remoteFile, localFile)
 	}
@@ -102,6 +115,7 @@ func DownloadFile(client *ssh.Client, remoteFile, localFile string, isDir bool) 
 }
 
 func downloadSingleFile(client *ssh.Client, remoteFile, localFile string) error {
+	logrus.Debug("Downloading single file: ", remoteFile)
 	session, err := client.NewSession()
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
@@ -131,10 +145,12 @@ func downloadSingleFile(client *ssh.Client, remoteFile, localFile string) error 
 		return fmt.Errorf("failed to copy file: %w", err)
 	}
 
+	logrus.Debug("File downloaded successfully: ", localFile)
 	return session.Wait()
 }
 
 func tarAndDownloadDir(client *ssh.Client, remoteDir, localFile string) error {
+	logrus.Debug("Tarring and downloading directory: ", remoteDir)
 	session, err := client.NewSession()
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
@@ -150,6 +166,7 @@ func tarAndDownloadDir(client *ssh.Client, remoteDir, localFile string) error {
 		return fmt.Errorf("failed to tar directory: %w, output: %s", err, string(output))
 	}
 
+	logrus.Debug("Directory tarred, downloading tar file")
 	return downloadSingleFile(client, "/tmp/dir.tar.gz", localFile)
 }
 
@@ -173,6 +190,7 @@ type model struct {
 
 func initialModel(client *ssh.Client, files []FileInfo) model {
 	_, h, _ := term.GetSize(int(os.Stdout.Fd()))
+	logrus.Debug("Initializing model with window height: ", h)
 	return model{
 		client:         client,
 		files:          files,
@@ -191,12 +209,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
+		logrus.Debug("Window size changed to: ", msg.Height)
 		m.windowHeight = msg.Height
 		return m, nil
 
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
+			logrus.Debug("Quitting program")
 			return m, tea.Quit
 
 		case "up", "k":
@@ -219,8 +239,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Toggle selection of the file or directory
 			if _, ok := m.selected[m.cursor]; ok {
 				delete(m.selected, m.cursor)
+				logrus.Debug("Deselected file: ", m.files[m.cursor].Name)
 			} else {
 				m.selected[m.cursor] = struct{}{}
+				logrus.Debug("Selected file: ", m.files[m.cursor].Name)
 			}
 
 		case "enter":
@@ -229,6 +251,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Navigate into the directory
 				currentDir := m.directoryStack[len(m.directoryStack)-1]
 				newDir := filepath.Join(currentDir, selectedFile.Name)
+				logrus.Debug("Navigating into directory: ", newDir)
 				files, err := ListFiles(m.client, newDir)
 				if err != nil {
 					m.status = fmt.Sprintf("Failed to list files: %v", err)
@@ -246,6 +269,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.directoryStack) > 1 {
 				m.directoryStack = m.directoryStack[:len(m.directoryStack)-1]
 				prevDir := m.directoryStack[len(m.directoryStack)-1]
+				logrus.Debug("Navigating back to directory: ", prevDir)
 				files, err := ListFiles(m.client, prevDir)
 				if err != nil {
 					m.status = fmt.Sprintf("Failed to list files: %v", err)
@@ -261,6 +285,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.downloading {
 				m.downloading = true
 				m.status = "Downloading files... "
+				logrus.Debug("Starting file download")
 				return m, downloadFiles(m.client, m.selectedFiles())
 			}
 		}
@@ -270,8 +295,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = "Downloaded " + msg.file + " successfully"
 			m.cursor = 0
 			m.selected = make(map[int]struct{})
+			logrus.Debug("Download completed successfully: ", msg.file)
 		} else {
 			m.status = "Failed to download " + msg.file + ": " + msg.err.Error()
+			logrus.Error("Download failed: ", msg.err)
 		}
 		m.downloading = false
 	}
@@ -339,6 +366,7 @@ func (m model) selectedFiles() []FileInfo {
 	for i := range m.selected {
 		files = append(files, m.files[i])
 	}
+	logrus.Debugf("Selected %d files for download", len(files))
 	return files
 }
 
@@ -349,11 +377,14 @@ func downloadFiles(client *ssh.Client, files []FileInfo) tea.Cmd {
 			if file.IsDir {
 				localFile += ".tar.gz"
 			}
+			logrus.Debug("Downloading file: ", file.Name)
 			err := DownloadFile(client, file.Path, localFile, file.IsDir)
 			if err != nil {
+				logrus.Error("Failed to download file: ", file.Name, ", error: ", err)
 				return downloadMsg{success: false, err: err, file: file.Name}
 			}
 		}
+		logrus.Debug("All files downloaded successfully")
 		return downloadMsg{success: true, file: ""}
 	}
 }
