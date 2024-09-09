@@ -138,3 +138,42 @@ func parseToken(tokenString string) map[string]interface{} {
 		return nil
 	}
 }
+
+// ResetPassword sends a password reset email to the specified user
+func ResetPassword(email string) error {
+	client, err := App.Auth(Ctx)
+	if err != nil {
+		return fmt.Errorf("error getting Auth client: %v", err)
+	}
+
+	// Check if the user exists
+	_, err = client.GetUserByEmail(Ctx, email)
+	if err != nil {
+		return fmt.Errorf("no user found with the email address: %s", email)
+	}
+
+	ApiKey := os.Getenv("API_KEY")
+	url := fmt.Sprintf("https://www.googleapis.com/identitytoolkit/v3/relyingparty/getOobConfirmationCode?key=%s", ApiKey)
+	payload := map[string]string{
+		"requestType": "PASSWORD_RESET",
+		"email":       email,
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("error marshalling payload: %v", err)
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
+	if err != nil {
+		return fmt.Errorf("error sending reset request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error response from server: %d", resp.StatusCode)
+	}
+
+	fmt.Printf("Please check your %s inbox for password reset link.\n", email)
+	return nil
+}
