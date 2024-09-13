@@ -90,6 +90,16 @@ ssm auth register --email user@example.com
 
 This command registers a new user with the provided email address. It will prompt for a password securely.
 
+#### Reset Password
+
+Reset the password for an existing user:
+
+```bash
+ssm auth reset-password --email user@example.com
+```
+
+This command initiates the password reset process for the specified email address. A password reset link will be sent to the user's email.
+
 ### Server Management
 
 #### Add
