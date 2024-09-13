@@ -4,6 +4,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 
@@ -22,7 +23,7 @@ var (
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete a server from the configuration",
-	Long: `Delete a server from the configuration. This command will remove a server by its name
+	Long: `Delete a server from the configuration. This command will remove a server by its IP address
 and can optionally clean up empty groups and environments.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		deleteServer()
@@ -31,9 +32,9 @@ and can optionally clean up empty groups and environments.`,
 
 func init() {
 	rootCmd.AddCommand(deleteCmd)
-	deleteCmd.Flags().StringVarP(&serverToDelete, "server", "s", "", "server to delete")
+	deleteCmd.Flags().StringVarP(&serverToDelete, "server", "s", "", "server to delete (hostname or IP)")
 	deleteCmd.Flags().BoolVarP(&cleanConfig, "clean-config", "c", false, "Clean unused groups")
-	_ = deleteCmd.MarkFlagRequired("serverToDelete")
+	_ = deleteCmd.MarkFlagRequired("server")
 }
 
 func cleanConfiguration(config *store.Config) {
@@ -44,8 +45,6 @@ func cleanConfiguration(config *store.Config) {
 			if len(env.Servers) == 0 {
 				group.Environment = append(group.Environment[:ei], group.Environment[ei+1:]...)
 				fmt.Printf(color.InCyan("Removed empty environment: %s\n"), env.Name)
-			} else {
-				fmt.Println(color.InCyan("No empty environments to clean"))
 			}
 		}
 		if len(group.Environment) == 0 {
@@ -55,10 +54,28 @@ func cleanConfiguration(config *store.Config) {
 	}
 }
 
+func resolveIP(input string) string {
+	ip := net.ParseIP(input)
+	if ip != nil {
+		return input // It's already an IP
+	}
+	ips, err := net.LookupIP(input)
+	if err != nil || len(ips) == 0 {
+		return "" // Unable to resolve
+	}
+	return ips[0].String()
+}
+
 func deleteServer() {
 	if serverToDelete == "" {
-		fmt.Println(color.InRed("Error: Server name to delete is required"))
-		fmt.Println(color.InYellow("Usage: ssm delete -s <server_name>"))
+		fmt.Println(color.InRed("Error: Server name or IP to delete is required"))
+		fmt.Println(color.InYellow("Usage: ssm delete -s <server_name_or_ip>"))
+		return
+	}
+
+	ipToDelete := resolveIP(serverToDelete)
+	if ipToDelete == "" {
+		fmt.Printf(color.InRed("Error: Unable to resolve '%s' to an IP address\n"), serverToDelete)
 		return
 	}
 
@@ -71,8 +88,8 @@ func deleteServer() {
 	for gi, grp := range config.Groups {
 		for ei, env := range grp.Environment {
 			for si, srv := range env.Servers {
-				if srv.HostName == serverToDelete {
-					fmt.Printf(color.InBlackOverYellow("Server '%s' found in environment '%s' of group '%s'\n"), srv.HostName, env.Name, grp.Name)
+				if srv.IP == ipToDelete {
+					fmt.Printf(color.InBlackOverYellow("Server '%s' with IP '%s' found in environment '%s' of group '%s'\n"), serverToDelete, srv.IP, env.Name, grp.Name)
 					reader := bufio.NewReader(os.Stdin)
 					fmt.Print(color.InYellow("Are you sure you want to delete this server? (y/n): "))
 					response, err := reader.ReadString('\n')
@@ -80,10 +97,9 @@ func deleteServer() {
 						fmt.Printf(color.InRed("Error reading input: %v\n"), err)
 						return
 					}
-
+					serverFound = true
 					response = strings.TrimSpace(response)
 					if response == "y" || response == "yes" {
-						serverFound = true
 						config.Groups[gi].Environment[ei].Servers = append(env.Servers[:si], env.Servers[si+1:]...)
 						fmt.Println(color.InGreen("Server deleted successfully!"))
 					} else {
@@ -96,7 +112,7 @@ func deleteServer() {
 	}
 
 	if !serverFound {
-		fmt.Printf(color.InRed("Server '%s' was not found in the configuration\n"), serverToDelete)
+		fmt.Printf(color.InRed("Server '%s' with IP '%s' was not found in the configuration\n"), serverToDelete, ipToDelete)
 		return
 	}
 
