@@ -21,45 +21,45 @@ import (
 
 var filterByEnvironment string
 
-// reverseCopyCmd downloads file from remote machine
+// reverseCopyCmd represents the command to download files from a remote machine
 var reverseCopyCmd = &cobra.Command{
 	Use:     "reverse-copy",
-	Short:   "Download file from remote machine",
+	Short:   "Download files from a remote machine",
 	Aliases: []string{"rcp"},
-	Long:    `Download file from remote machine. Default location for saving is $HOME`,
+	Long:    `Download files or directories from a remote machine. The default location for saving is the current working directory.`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 || len(args) > 1 {
-			fmt.Println(color.InYellow("Usage: ssm reverse-copy group-name\nYou can also pass environment using -e (optional)"))
+			fmt.Println(color.InYellow("Usage: ssm reverse-copy group-name\nYou can also pass an environment using -e (optional)"))
 			os.Exit(1)
 		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		logrus.Debug("Starting reverse-copy command")
+		logrus.Debug("Initiating reverse-copy command")
 		user, host, _, isRDP, err := ListToConnectServers(args[0], filterByEnvironment)
 		if err != nil {
-			logrus.Error("Failed to list servers: ", err)
+			logrus.Error("Failed to retrieve server list: ", err)
 			return
 		}
 
 		if isRDP {
-			fmt.Println(color.InRed("Reverse copy does not work for Windows machines (RDP connections)."))
+			fmt.Println(color.InRed("Reverse copy operation is not supported for Windows machines (RDP connections)."))
 			return
 		}
 
-		logrus.Debug("Creating SSH client for ", user, "@", host)
+		logrus.Debug("Establishing SSH connection for ", user, "@", host)
 		client, _ := ssh2.NewSSHClient(user, host)
 
 		files, err := ListFiles(client, ".")
 		if err != nil {
-			log.Fatalf("Failed to list files: %v", err)
+			log.Fatalf("Failed to retrieve file list: %v", err)
 		}
 
-		logrus.Debug("Starting Bubble Tea program")
+		logrus.Debug("Launching interactive file selection interface")
 		p := tea.NewProgram(initialModel(client, files))
 
 		if _, err := p.Run(); err != nil {
-			log.Fatalf("Error running program: %v", err)
+			log.Fatalf("Error running interactive interface: %v", err)
 		}
 	},
 }
@@ -68,19 +68,19 @@ func init() {
 	rootCmd.AddCommand(reverseCopyCmd)
 }
 
-// FileInfo holds the name, type of file, path
+// FileInfo represents information about a file or directory on the remote server
 type FileInfo struct {
 	Name  string
 	IsDir bool
 	Path  string
 }
 
-// ListFiles lists files in the given directory on the remote server
+// ListFiles retrieves a list of files and directories from the specified remote directory
 func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
-	logrus.Debug("Listing files in directory: ", remoteDir)
+	logrus.Debug("Retrieving file list from directory: ", remoteDir)
 	session, err := client.NewSession()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create session: %w", err)
+		return nil, fmt.Errorf("failed to create SSH session: %w", err)
 	}
 	defer func(session *ssh.Session) {
 		_ = session.Close()
@@ -88,7 +88,7 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 
 	output, err := session.Output("ls -lA " + remoteDir + " | grep -v '^total' | awk '{print $1, substr($0, index($0,$9))}'")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list files: %w", err)
+		return nil, fmt.Errorf("failed to execute remote file listing command: %w", err)
 	}
 
 	lines := strings.Split(string(output), "\n")
@@ -102,23 +102,25 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		files = append(files, FileInfo{Name: parts[1], IsDir: isDir, Path: filepath.Join(remoteDir, parts[1])})
 	}
 
-	logrus.Debugf("Found %d files/directories", len(files))
+	logrus.Debugf("Retrieved %d files/directories", len(files))
 	return files, nil
 }
 
+// DownloadFile downloads a file or directory from the remote server to the local machine
 func DownloadFile(client *ssh.Client, remoteFile, localFile string, isDir bool) error {
-	logrus.Debug("Downloading file: ", remoteFile)
+	logrus.Debug("Initiating download for: ", remoteFile)
 	if isDir {
 		return tarAndDownloadDir(client, remoteFile, localFile)
 	}
 	return downloadSingleFile(client, remoteFile, localFile)
 }
 
+// downloadSingleFile downloads a single file from the remote server
 func downloadSingleFile(client *ssh.Client, remoteFile, localFile string) error {
-	logrus.Debug("Downloading single file: ", remoteFile)
+	logrus.Debug("Downloading individual file: ", remoteFile)
 	session, err := client.NewSession()
 	if err != nil {
-		return fmt.Errorf("failed to create session: %w", err)
+		return fmt.Errorf("failed to create SSH session: %w", err)
 	}
 	defer func(session *ssh.Session) {
 		_ = session.Close()
@@ -126,11 +128,11 @@ func downloadSingleFile(client *ssh.Client, remoteFile, localFile string) error 
 
 	remoteFileReader, err := session.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("failed to create stdout pipe: %w", err)
+		return fmt.Errorf("failed to establish stdout pipe: %w", err)
 	}
 
 	if err := session.Start(fmt.Sprintf("cat %s", remoteFile)); err != nil {
-		return fmt.Errorf("failed to start cat command: %w", err)
+		return fmt.Errorf("failed to initiate remote file reading: %w", err)
 	}
 
 	localFileWriter, err := os.Create(localFile)
@@ -142,18 +144,19 @@ func downloadSingleFile(client *ssh.Client, remoteFile, localFile string) error 
 	}(session)
 
 	if _, err := io.Copy(localFileWriter, remoteFileReader); err != nil {
-		return fmt.Errorf("failed to copy file: %w", err)
+		return fmt.Errorf("failed to transfer file contents: %w", err)
 	}
 
-	logrus.Debug("File downloaded successfully: ", localFile)
+	logrus.Debug("File successfully downloaded: ", localFile)
 	return session.Wait()
 }
 
+// tarAndDownloadDir compresses a remote directory and downloads it as a tar.gz file
 func tarAndDownloadDir(client *ssh.Client, remoteDir, localFile string) error {
-	logrus.Debug("Tarring and downloading directory: ", remoteDir)
+	logrus.Debug("Compressing and downloading directory: ", remoteDir)
 	session, err := client.NewSession()
 	if err != nil {
-		return fmt.Errorf("failed to create session: %w", err)
+		return fmt.Errorf("failed to create SSH session: %w", err)
 	}
 	defer func(session *ssh.Session) {
 		_ = session.Close()
@@ -163,19 +166,21 @@ func tarAndDownloadDir(client *ssh.Client, remoteDir, localFile string) error {
 	tarCmd := fmt.Sprintf("tar -czf /tmp/dir.tar.gz -C %s --transform 's,^,%s/,' .", remoteDir, dirName)
 	output, err := session.CombinedOutput(tarCmd)
 	if err != nil {
-		return fmt.Errorf("failed to tar directory: %w, output: %s", err, string(output))
+		return fmt.Errorf("failed to compress remote directory: %w, output: %s", err, string(output))
 	}
 
-	logrus.Debug("Directory tarred, downloading tar file")
+	logrus.Debug("Directory compressed, initiating download of tar file")
 	return downloadSingleFile(client, "/tmp/dir.tar.gz", localFile)
 }
 
+// downloadMsg represents the result of a file download operation
 type downloadMsg struct {
 	success bool
 	err     error
 	file    string
 }
 
+// model represents the state of the interactive file selection interface
 type model struct {
 	client         *ssh.Client
 	files          []FileInfo
@@ -188,9 +193,10 @@ type model struct {
 	windowHeight   int
 }
 
+// initialModel creates and initializes a new model for the interactive interface
 func initialModel(client *ssh.Client, files []FileInfo) model {
 	_, h, _ := term.GetSize(int(os.Stdout.Fd()))
-	logrus.Debug("Initializing model with window height: ", h)
+	logrus.Debug("Initializing interface model with window height: ", h)
 	return model{
 		client:         client,
 		files:          files,
@@ -201,22 +207,25 @@ func initialModel(client *ssh.Client, files []FileInfo) model {
 		windowHeight:   h,
 	}
 }
+
+// Init initializes the model (required by tea.Model interface)
 func (m model) Init() tea.Cmd {
 	return nil
 }
 
+// Update handles user input and updates the model accordingly
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
-		logrus.Debug("Window size changed to: ", msg.Height)
+		logrus.Debug("Window dimensions updated to: ", msg.Height)
 		m.windowHeight = msg.Height
 		return m, nil
 
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
-			logrus.Debug("Quitting program")
+			logrus.Debug("User initiated program exit")
 			return m, tea.Quit
 
 		case "up", "k":
@@ -236,43 +245,43 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case " ":
-			// Toggle selection of the file or directory
+			// Toggle selection status of the file or directory
 			if _, ok := m.selected[m.cursor]; ok {
 				delete(m.selected, m.cursor)
-				logrus.Debug("Deselected file: ", m.files[m.cursor].Name)
+				logrus.Debug("File deselected: ", m.files[m.cursor].Name)
 			} else {
 				m.selected[m.cursor] = struct{}{}
-				logrus.Debug("Selected file: ", m.files[m.cursor].Name)
+				logrus.Debug("File selected: ", m.files[m.cursor].Name)
 			}
 
 		case "enter":
 			selectedFile := m.files[m.cursor]
 			if selectedFile.IsDir {
-				// Navigate into the directory
+				// Navigate into the selected directory
 				currentDir := m.directoryStack[len(m.directoryStack)-1]
 				newDir := filepath.Join(currentDir, selectedFile.Name)
-				logrus.Debug("Navigating into directory: ", newDir)
+				logrus.Debug("Navigating to directory: ", newDir)
 				files, err := ListFiles(m.client, newDir)
 				if err != nil {
-					m.status = fmt.Sprintf("Failed to list files: %v", err)
+					m.status = fmt.Sprintf("Failed to retrieve file list: %v", err)
 					return m, nil
 				}
 				m.directoryStack = append(m.directoryStack, newDir)
 				m.files = files
 				m.cursor = 0
 				m.selected = make(map[int]struct{})
-				m.status = fmt.Sprintf("Navigated into directory: %s", selectedFile.Name)
+				m.status = fmt.Sprintf("Entered directory: %s", selectedFile.Name)
 			}
 
 		case "backspace":
-			// Navigate back to the previous directory
+			// Navigate back to the parent directory
 			if len(m.directoryStack) > 1 {
 				m.directoryStack = m.directoryStack[:len(m.directoryStack)-1]
 				prevDir := m.directoryStack[len(m.directoryStack)-1]
-				logrus.Debug("Navigating back to directory: ", prevDir)
+				logrus.Debug("Returning to directory: ", prevDir)
 				files, err := ListFiles(m.client, prevDir)
 				if err != nil {
-					m.status = fmt.Sprintf("Failed to list files: %v", err)
+					m.status = fmt.Sprintf("Failed to retrieve file list: %v", err)
 					return m, nil
 				}
 				m.files = files
@@ -284,21 +293,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "d":
 			if !m.downloading {
 				m.downloading = true
-				m.status = "Downloading files... "
-				logrus.Debug("Starting file download")
+				m.status = "Downloading selected files... "
+				logrus.Debug("Initiating file download process")
 				return m, downloadFiles(m.client, m.selectedFiles())
 			}
 		}
 
 	case downloadMsg:
 		if msg.success {
-			m.status = "Downloaded " + msg.file + " successfully"
+			m.status = "Successfully downloaded " + msg.file
 			m.cursor = 0
 			m.selected = make(map[int]struct{})
 			logrus.Debug("Download completed successfully: ", msg.file)
 		} else {
 			m.status = "Failed to download " + msg.file + ": " + msg.err.Error()
-			logrus.Error("Download failed: ", msg.err)
+			logrus.Error("Download operation failed: ", msg.err)
 		}
 		m.downloading = false
 	}
@@ -306,16 +315,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// getViewportHeight calculates the available height for displaying files
 func (m model) getViewportHeight() int {
 	// Reserve space for header, status, and instructions
 	reservedLines := 10
 	return max(m.windowHeight-reservedLines, 1)
 }
 
+// View generates the text-based user interface for file selection
 func (m model) View() string {
 	s := "Files:\n\n"
 
-	// range of files to display
+	// Determine the range of files to display
 	startIdx := m.scrollOffset
 	endIdx := min(startIdx+m.getViewportHeight(), len(m.files))
 
@@ -355,21 +366,25 @@ func (m model) View() string {
 	return s
 }
 
+// min returns the smaller of two integers
 func min(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
 }
+
+// selectedFiles returns a slice of FileInfo for all selected files
 func (m model) selectedFiles() []FileInfo {
 	var files []FileInfo
 	for i := range m.selected {
 		files = append(files, m.files[i])
 	}
-	logrus.Debugf("Selected %d files for download", len(files))
+	logrus.Debugf("Total files selected for download: %d", len(files))
 	return files
 }
 
+// downloadFiles initiates the download process for selected files
 func downloadFiles(client *ssh.Client, files []FileInfo) tea.Cmd {
 	return func() tea.Msg {
 		for _, file := range files {
@@ -377,14 +392,14 @@ func downloadFiles(client *ssh.Client, files []FileInfo) tea.Cmd {
 			if file.IsDir {
 				localFile += ".tar.gz"
 			}
-			logrus.Debug("Downloading file: ", file.Name)
+			logrus.Debug("Initiating download for: ", file.Name)
 			err := DownloadFile(client, file.Path, localFile, file.IsDir)
 			if err != nil {
-				logrus.Error("Failed to download file: ", file.Name, ", error: ", err)
+				logrus.Error("Download failed for file: ", file.Name, ", error: ", err)
 				return downloadMsg{success: false, err: err, file: file.Name}
 			}
 		}
-		logrus.Debug("All files downloaded successfully")
+		logrus.Debug("All selected files downloaded successfully")
 		return downloadMsg{success: true, file: ""}
 	}
 }

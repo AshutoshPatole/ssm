@@ -29,11 +29,16 @@ var addCmd = &cobra.Command{
 	Short: "Add a new SSH server configuration to your profile.",
 	Long: `This command allows you to add a new SSH server configuration to your profile.
 
-You can specify the hostname, username, group, environment, and other optional settings such as alias and dotfiles configuration.`,
+You can specify the hostname, username, group, environment, and other optional settings such as alias and dotfiles configuration.
+
+Example usage:
+		ssm add example.com -u myuser -g mygroup -a myalias -e prod -d
+
+This will add a server with hostname example.com, username myuser, group mygroup, alias myalias, environment prod, and setup dotfiles.`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			logrus.Debug("No hostname provided")
-			return errors.New(color.InRed("Requires hostname of the machine"))
+			return errors.New(color.InRed("Requires hostname of the machine. Please provide a hostname."))
 		}
 		logrus.Debugf("Hostname provided: %s", args[0])
 		return nil
@@ -48,7 +53,7 @@ You can specify the hostname, username, group, environment, and other optional s
 		}
 		if !validEnvironment {
 			logrus.Debugf("Invalid environment value: %s", environment)
-			logrus.Fatalln(color.InRed("Invalid environment value"))
+			logrus.Fatalln(color.InRed(fmt.Sprintf("Invalid environment value. Allowed values are: %v", allowedEnvironmentValues)))
 		}
 		logrus.Debugf("Adding server with hostname: %s", args[0])
 		addServer(args[0])
@@ -57,10 +62,11 @@ You can specify the hostname, username, group, environment, and other optional s
 
 func addServer(host string) {
 	logrus.Debugf("Attempting to add server: %s", host)
+	fmt.Println(color.InYellow("Please enter the password for the server:"))
 	password, err := ssh.AskPassword()
 	if err != nil {
 		logrus.Debugf("Error reading password: %v", err)
-		logrus.Fatal(color.InRed("Error reading password"))
+		logrus.Fatal(color.InRed("Error reading password. Please try again."))
 	}
 
 	if rdpConnectionString {
@@ -74,23 +80,26 @@ func addServer(host string) {
 		}
 		logrus.Debug("Saving RDP connection details")
 		store.Save(group, environment, host, username, alias, credentialKey, true)
+		fmt.Println(color.InGreen("RDP connection details saved successfully!"))
 	} else {
 		logrus.Debug("Saving SSH connection details")
 		store.Save(group, environment, host, username, alias, "", false)
 		logrus.Debug("Initializing SSH connection")
 		ssh.InitSSHConnection(username, password, host, group, environment, alias, setupDotFiles)
+		fmt.Println(color.InGreen("SSH connection details saved and initialized successfully!"))
 	}
+	fmt.Printf(color.InCyan("Server %s added to group %s with alias %s in %s environment.\n"), host, group, alias, environment)
 }
 
 func init() {
 	logrus.Debug("Initializing add command")
 	rootCmd.AddCommand(addCmd)
-	addCmd.Flags().StringVarP(&username, "username", "u", "root", "Username to use")
-	addCmd.Flags().StringVarP(&group, "group", "g", "", "Group to use")
-	addCmd.Flags().StringVarP(&alias, "alias", "a", "", "Alias to use")
-	addCmd.Flags().StringVarP(&environment, "environment", "e", "dev", "Environment to use")
-	addCmd.Flags().BoolVarP(&setupDotFiles, "dotfiles", "d", false, "Configure the dotfiles")
-	addCmd.Flags().BoolVarP(&rdpConnectionString, "rdp", "r", false, "Flag to indicate its RDP connection and not try SSH")
+	addCmd.Flags().StringVarP(&username, "username", "u", "root", "Username to use for the connection")
+	addCmd.Flags().StringVarP(&group, "group", "g", "", "Group to categorize the server")
+	addCmd.Flags().StringVarP(&alias, "alias", "a", "", "Alias for easy reference to the server")
+	addCmd.Flags().StringVarP(&environment, "environment", "e", "dev", "Environment of the server (dev/staging/prod)")
+	addCmd.Flags().BoolVarP(&setupDotFiles, "dotfiles", "d", false, "Configure the dotfiles on the server")
+	addCmd.Flags().BoolVarP(&rdpConnectionString, "rdp", "r", false, "Flag to indicate it's an RDP connection instead of SSH")
 	_ = addCmd.MarkFlagRequired("group")
 	_ = addCmd.MarkFlagRequired("alias")
 }
