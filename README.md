@@ -72,9 +72,28 @@ groups:
           - hostname: staging-server.example.com
             alias: staging1
             user: tester
+firebaseConfig: /path/to/downloaded/service-account.json
+firebaseApiKey: YOUR_FIREBASE_API_KEY
 ```
 
 This configuration defines two groups (production and development) with different environments and servers. You can customize this structure to fit your specific needs.
+
+The `firebaseConfig` and `firebaseApiKey` fields are used to configure your own Firebase cloud for synchronization:
+
+- `firebaseConfig`: The path to your Firebase service account JSON file. This file contains the credentials needed to authenticate your application with Firebase.
+- `firebaseApiKey`: Your Firebase API key, which is used for client-side authentication.
+
+To obtain these values:
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project or select an existing one
+3. Go to Project Settings > Service Accounts
+4. Click "Generate new private key" to download the service account JSON file
+5. Set the `firebaseConfig` path to the location where you saved this file
+6. Go to Project Settings > General
+7. Copy the "Web API Key" and set it as the `firebaseApiKey` value
+
+By providing these configurations, you can use your own Firebase project for syncing SSM data, ensuring that your sensitive information is stored in your own cloud environment.
 
 ## Commands
 
