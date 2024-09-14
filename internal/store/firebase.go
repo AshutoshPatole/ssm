@@ -98,6 +98,9 @@ func LoginUser(email, password string) (map[string]interface{}, error) {
 
 func authenticateWithFirebase(email, password string) (map[string]interface{}, error) {
 	ApiKey := viper.GetString("firebaseApiKey")
+	if ApiKey == "" {
+		ApiKey = os.Getenv("FIREBASE_API_KEY")
+	}
 	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=%s", ApiKey)
 	payload := map[string]string{
 		"email":             email,
@@ -184,6 +187,9 @@ func ResetPassword(email string) error {
 	}
 
 	ApiKey := viper.GetString("firebaseApiKey")
+	if ApiKey == "" {
+		ApiKey = os.Getenv("FIREBASE_API_KEY")
+	}
 	url := fmt.Sprintf("https://www.googleapis.com/identitytoolkit/v3/relyingparty/getOobConfirmationCode?key=%s", ApiKey)
 	payload := map[string]string{
 		"requestType": "PASSWORD_RESET",
