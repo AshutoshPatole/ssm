@@ -23,5 +23,7 @@ type Group struct {
 }
 
 type Config struct {
-	Groups []Group `yaml:"groups"`
+	Groups         []Group `yaml:"groups"`
+	FirebaseConfig string  `yaml:"firebaseConfig,omitempty" default:"/path/to/downloaded/service-account.json"`
+	FirebaseApiKey string  `yaml:"firebaseApiKey,omitempty" default:""`
 }

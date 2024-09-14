@@ -4,3 +4,4 @@ dist/
 
 .idea
 .vscode
+internal/store/firebase-api.txt

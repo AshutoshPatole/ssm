@@ -3,8 +3,6 @@ package store
 import (
 	"bytes"
 	"context"
-	"embed"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,20 +15,27 @@ import (
 	"firebase.google.com/go/auth"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"google.golang.org/api/option"
 )
 
 var App *firebase.App
 var Ctx = context.Background()
 
-//go:embed simple-ssh-manager-firebase-adminsdk-y7ei5-ac0913e54f.json
-var firebaseConfig embed.FS
-
 // InitFirebase initializes the Firebase app and assigns it to App
 func InitFirebase() error {
-	configFile, err := firebaseConfig.ReadFile("simple-ssh-manager-firebase-adminsdk-y7ei5-ac0913e54f.json")
+	var config Config
+	if err := viper.Unmarshal(&config); err != nil {
+		return fmt.Errorf("error unmarshaling config: %v", err)
+	}
+
+	if config.FirebaseConfig == "" {
+		return fmt.Errorf("Firebase configuration is missing in the config file")
+	}
+
+	configFile, err := os.ReadFile(config.FirebaseConfig)
 	if err != nil {
-		return fmt.Errorf("error reading embedded config file: %v", err)
+		return fmt.Errorf("cannot find or read Firebase config file at %s: %v", config.FirebaseConfig, err)
 	}
 
 	opt := option.WithCredentialsJSON(configFile)
@@ -92,7 +97,7 @@ func LoginUser(email, password string) (map[string]interface{}, error) {
 }
 
 func authenticateWithFirebase(email, password string) (map[string]interface{}, error) {
-	ApiKey := os.Getenv("API_KEY")
+	ApiKey := viper.GetString("firebaseApiKey")
 	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=%s", ApiKey)
 	payload := map[string]string{
 		"email":             email,
@@ -116,16 +121,22 @@ func authenticateWithFirebase(email, password string) (map[string]interface{}, e
 		}
 	}(resp.Body)
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("wrong Credentials: %d", resp.StatusCode)
-	}
-
-	var response map[string]interface{}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		var errorResponse map[string]interface{}
+		if err := json.Unmarshal(body, &errorResponse); err == nil {
+			if errorDetails, ok := errorResponse["error"].(map[string]interface{}); ok {
+				return nil, fmt.Errorf("HTTP Error %d: %s", resp.StatusCode, errorDetails["message"])
+			}
+		}
+		return nil, fmt.Errorf("HTTP Error %d: %s", resp.StatusCode, string(body))
+	}
+
+	var response map[string]interface{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return nil, err
@@ -172,7 +183,7 @@ func ResetPassword(email string) error {
 		return fmt.Errorf("no user found with the email address: %s", email)
 	}
 
-	ApiKey := os.Getenv("API_KEY")
+	ApiKey := viper.GetString("firebaseApiKey")
 	url := fmt.Sprintf("https://www.googleapis.com/identitytoolkit/v3/relyingparty/getOobConfirmationCode?key=%s", ApiKey)
 	payload := map[string]string{
 		"requestType": "PASSWORD_RESET",
@@ -190,8 +201,19 @@ func ResetPassword(email string) error {
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %v", err)
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error response from server: %d", resp.StatusCode)
+		var errorResponse map[string]interface{}
+		if err := json.Unmarshal(body, &errorResponse); err == nil {
+			if errorDetails, ok := errorResponse["error"].(map[string]interface{}); ok {
+				return fmt.Errorf("HTTP Error %d: %s", resp.StatusCode, errorDetails["message"])
+			}
+		}
+		return fmt.Errorf("HTTP Error %d: %s", resp.StatusCode, string(body))
 	}
 
 	fmt.Printf("Please check your %s inbox for password reset link.\n", email)

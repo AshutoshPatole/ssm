@@ -2,7 +2,7 @@
 package cmd
 
 import (
-	"embed"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/TwiN/go-color"
 	goversion "github.com/caarlos0/go-version"
-	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -61,38 +60,14 @@ func Execute() {
 	}
 }
 
-//go:embed .env.production
-var envFile embed.FS
+//go:embed art.txt
+var asciiArt string
 
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssm.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "toggle debug logs")
 	rootCmd.PersistentFlags().BoolVar(&showVersion, "version", false, "Show version")
-	// Note: Not sure if this is right method, but I am finding it difficult
-	// to handle .env files and the firebase config file
-	data, err := envFile.ReadFile(".env.production")
-	if err != nil {
-		logrus.Errorf("error reading embedded env file: %v", err)
-	}
-
-	// Write the embedded data to a temporary file and load it with dotenv
-	tempFile, err := os.CreateTemp("", ".env")
-	if err != nil {
-		logrus.Errorf("error creating temporary file: %v", err)
-	}
-	defer func(tempFile *os.File) {
-		_ = tempFile.Close()
-	}(tempFile)
-
-	if _, err := tempFile.Write(data); err != nil {
-		logrus.Errorf("error writing to temporary file: %v", err)
-	}
-
-	err = godotenv.Load(tempFile.Name())
-	if err != nil {
-		return
-	}
 
 }
 
@@ -117,11 +92,10 @@ func initConfig() {
 				_ = file.Close()
 			}(file)
 		}
-
 		// Search config in home directory with name ".ssm" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(configName)
+		viper.SetConfigName(".ssm")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -129,11 +103,10 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		logrus.Debugf("Using config file: %s", viper.ConfigFileUsed())
+	} else {
+		logrus.Errorf("Error [.ssm.yaml]: %v", err)
 	}
 }
-
-//go:embed art.txt
-var asciiArt string
 
 func buildVersion(version, commit, date, builtBy, treeState string) goversion.Info {
 	return goversion.GetVersionInfo(
@@ -173,7 +146,7 @@ func setupFileLogging() {
 	}
 
 	logFile := filepath.Join(logDir, "ssm_debug.log")
-	debugFile, err = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	debugFile, err = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		logrus.Errorf("Failed to open log file: %v", err)
 		return
