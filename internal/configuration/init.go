@@ -5,7 +5,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"path/filepath"
 
-	"github.com/TwiN/go-color"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -36,15 +35,15 @@ func runInstallScript(client *ssh.Client, remoteHomeDir string) {
 func runCommand(client *ssh.Client, command string) {
 	session, err := client.NewSession()
 	if err != nil {
-		logrus.Fatalf("Failed to create session: %v", err)
+		logrus.Fatal("Failed to create session:", err)
 	}
 	defer func(session *ssh.Session) {
 		_ = session.Close()
 	}(session)
 
-	logrus.Debug(color.InGreen("Running command: "), command)
+	logrus.Debug("Running command:", command)
 	err = session.Run(command)
 	if err != nil {
-		logrus.Fatalf("Failed to run command %s: %v", command, err)
+		logrus.Fatal("Failed to run command:", command, err)
 	}
 }

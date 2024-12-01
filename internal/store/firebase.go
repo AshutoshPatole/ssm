@@ -36,7 +36,7 @@ func InitFirebase() error {
 	opt := option.WithCredentialsJSON(configFile)
 	App, err = firebase.NewApp(Ctx, nil, opt)
 	if err != nil {
-		logrus.Fatalf("init firebase failed: %v", err)
+		logrus.Fatal("Failed to initialize Firebase:", err)
 	}
 
 	return nil

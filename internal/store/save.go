@@ -3,7 +3,6 @@ package store
 import (
 	"net"
 
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -13,7 +12,7 @@ var c Config
 func Save(group, environment, host, user, alias, password string, isRDP bool) {
 	err := viper.Unmarshal(&c)
 	if err != nil {
-		logrus.Fatal(color.InRed(err.Error()))
+		logrus.Fatal("Failed to unmarshal configuration:", err)
 	}
 
 	doesGroupExist := false
@@ -65,8 +64,8 @@ func Save(group, environment, host, user, alias, password string, isRDP bool) {
 		} else {
 			isDuplicate := checkDuplicateServer(server, c.Groups[groupIndex].Environment[environmentIndex].Servers)
 			if isDuplicate {
-				logrus.Warn(color.InYellow("Duplicate server found in group"))
-				return // Return early to prevent adding duplicate
+				logrus.Warn("Duplicate server found in group")
+				return
 			}
 			c.Groups[groupIndex].Environment[environmentIndex].Servers = append(c.Groups[groupIndex].Environment[environmentIndex].Servers, server)
 		}
@@ -74,7 +73,7 @@ func Save(group, environment, host, user, alias, password string, isRDP bool) {
 
 	err = viper.WriteConfig()
 	if err != nil {
-		logrus.Fatal(color.InRed(err.Error()))
+		logrus.Fatal("Failed to write configuration:", err)
 	}
 }
 
@@ -91,7 +90,7 @@ func checkDuplicateServer(s Server, servers []Server) bool {
 func getIP(host string) string {
 	lookupHost, err := net.LookupHost(host)
 	if err != nil {
-		logrus.Error(color.InRed("Could not resolve IP from hostname"))
+		logrus.Error("Could not resolve IP from hostname:", err)
 		return host
 	}
 	if len(lookupHost) == 0 {

@@ -43,17 +43,17 @@ func init() {
 func CheckForUpdates() (bool, *GitHubRelease, *semver.Version) {
 	currentVersion, err := semver.NewVersion(version)
 	if err != nil {
-		logrus.Fatalf("Error parsing current version: %s\n", err)
+		logrus.Fatal("Error parsing current version:", err)
 	}
 
 	latestRelease, err := getLatestRelease()
 	if err != nil {
-		logrus.Fatalf("Error fetching latest release: %s\n", err)
+		logrus.Fatal("Error fetching latest release:", err)
 	}
 
 	latestVersion, err := semver.NewVersion(latestRelease.TagName)
 	if err != nil {
-		logrus.Fatalf("Error parsing latest version: %s\n", err)
+		logrus.Fatal("Error parsing latest version:", err)
 	}
 
 	return latestVersion.GreaterThan(currentVersion), latestRelease, latestVersion
@@ -122,13 +122,12 @@ func downloadUpdate(release *GitHubRelease) {
 	}
 
 	if downloadURL == "" {
-		logrus.Fatalf("No matching asset found for your system")
+		logrus.Fatal("No matching asset found for your system")
 		return
 	}
 
 	upgrade(downloadURL, assetName)
-
-	logrus.Debugf("Update downloaded as %s\n", assetName)
+	logrus.Debug("Update downloaded as", assetName)
 }
 
 // getAssetName determines the appropriate asset name based on the current operating system and architecture
