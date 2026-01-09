@@ -216,48 +216,43 @@ func (m deleteModel) View() string {
 // Logic to delete servers
 
 func deleteSelectedServers(m deleteModel) tea.Cmd {
-	return func() tea.Msg {
-		// We need to delete from Config.
-		// Since indices shift when we delete, it is safer to rebuild the structure or delete by IP.
-		// However, simple rebuilding is easier/safer given the nested structure.
-
-		ipsToDelete := make(map[string]struct{})
-		for idx := range m.selected {
-			ipsToDelete[m.items[idx].IP] = struct{}{}
-		}
-
-		newGroups := []store.Group{}
-
-		for _, grp := range m.config.Groups {
-			newEnv := []store.Env{}
-			for _, env := range grp.Environment {
-				newServers := []store.Server{}
-				for _, srv := range env.Servers {
-					if _, deleteIt := ipsToDelete[srv.IP]; !deleteIt {
-						newServers = append(newServers, srv)
-					}
-				}
-				env.Servers = newServers
-				if len(env.Servers) > 0 {
-					newEnv = append(newEnv, env)
-				}
-			}
-			grp.Environment = newEnv
-			if len(grp.Environment) > 0 {
-				newGroups = append(newGroups, grp)
-			}
-		}
-
-		m.config.Groups = newGroups
-		viper.Set("groups", m.config.Groups)
-
-		if err := viper.WriteConfig(); err != nil {
-			logrus.Error("Failed to write config:", err)
-			return tea.Quit
-		}
-
-		return tea.Quit
+	// Perform deletion synchronously before quitting
+	ipsToDelete := make(map[string]struct{})
+	for idx := range m.selected {
+		ipsToDelete[m.items[idx].IP] = struct{}{}
 	}
+
+	newGroups := []store.Group{}
+
+	for _, grp := range m.config.Groups {
+		newEnv := []store.Env{}
+		for _, env := range grp.Environment {
+			newServers := []store.Server{}
+			for _, srv := range env.Servers {
+				if _, deleteIt := ipsToDelete[srv.IP]; !deleteIt {
+					newServers = append(newServers, srv)
+				}
+			}
+			env.Servers = newServers
+			if len(env.Servers) > 0 {
+				newEnv = append(newEnv, env)
+			}
+		}
+		grp.Environment = newEnv
+		if len(grp.Environment) > 0 {
+			newGroups = append(newGroups, grp)
+		}
+	}
+
+	m.config.Groups = newGroups
+	viper.Set("groups", m.config.Groups)
+
+	if err := viper.WriteConfig(); err != nil {
+		logrus.Error("Failed to write config:", err)
+	}
+
+	// Return the Quit command directly
+	return tea.Quit
 }
 
 func runInteractiveDelete() {
