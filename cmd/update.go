@@ -137,22 +137,28 @@ func getAssetName() string {
 
 	switch operatingSystem {
 	case "darwin":
-		if arch == "arm64" {
+		switch arch {
+		case "arm64":
 			return "ssm_Darwin_arm64.tar.gz"
+		default:
+			return "ssm_Darwin_x86_64.tar.gz"
 		}
-		return "ssm_Darwin_x86_64.tar.gz"
 	case "linux":
-		if arch == "arm64" {
+		switch arch {
+		case "arm64":
 			return "ssm_Linux_arm64.tar.gz"
-		} else if arch == "386" {
+		case "386":
 			return "ssm_Linux_i386.tar.gz"
+		default:
+			return "ssm_Linux_x86_64.tar.gz"
 		}
-		return "ssm_Linux_x86_64.tar.gz"
 	case "windows":
-		if arch == "arm64" {
+		switch arch {
+		case "arm64":
 			return "ssm_Windows_arm64.zip"
+		default:
+			return "ssm_Windows_x86_64.zip"
 		}
-		return "ssm_Windows_x86_64.zip"
 	default:
 		logrus.Fatalf("Unsupported operating system: %s", operatingSystem)
 		return ""
