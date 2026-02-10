@@ -3,8 +3,6 @@ package store
 import (
 	"log"
 	"net"
-	"sort"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -77,7 +75,7 @@ func Save(group, environment, host, user, alias, password string, isRDP bool) {
 		}
 
 	}
-	SortConfig(&c)
+
 	viper.Set("groups", c.Groups)
 	err = viper.WriteConfig()
 	if err != nil {
@@ -85,16 +83,7 @@ func Save(group, environment, host, user, alias, password string, isRDP bool) {
 	}
 }
 
-// SortConfig sorts all servers in every environment by Alias (a->z, case-insensitive).
-func SortConfig(cfg *Config) {
-	for i := range cfg.Groups {
-		for j := range cfg.Groups[i].Environment {
-			sort.Slice(cfg.Groups[i].Environment[j].Servers, func(a, b int) bool {
-				return strings.ToLower(cfg.Groups[i].Environment[j].Servers[a].Alias) < strings.ToLower(cfg.Groups[i].Environment[j].Servers[b].Alias)
-			})
-		}
-	}
-}
+
 
 func checkDuplicateServer(s Server, servers []Server) bool {
 	isDuplicate := false
