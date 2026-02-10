@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/AshutoshPatole/ssm/internal/store"
-	"github.com/TwiN/go-color"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/sirupsen/logrus"
@@ -258,7 +257,7 @@ func deleteSelectedServers(m deleteModel) tea.Cmd {
 func runInteractiveDelete() {
 	var config store.Config
 	if err := viper.Unmarshal(&config); err != nil {
-		fmt.Printf(color.InRed("Error: Failed to load configuration: %v\n"), err)
+		fmt.Printf("Error: Failed to load configuration: %v\n", err)
 		return
 	}
 
@@ -273,13 +272,13 @@ func runInteractiveDelete() {
 func deleteServerNonInteractive() {
 	ipToDelete := resolveIP(serverToDelete)
 	if ipToDelete == "" {
-		fmt.Printf(color.InRed("Error: Unable to resolve '%s' to an IP address\n"), serverToDelete)
+		fmt.Printf("Error: Unable to resolve '%s' to an IP address\n", serverToDelete)
 		return
 	}
 
 	var config store.Config
 	if err := viper.Unmarshal(&config); err != nil {
-		fmt.Printf(color.InRed("Error: Failed to load configuration: %v\n"), err)
+		fmt.Printf("Error: Failed to load configuration: %v\n", err)
 		return
 	}
 	serverFound := false
@@ -287,21 +286,21 @@ func deleteServerNonInteractive() {
 		for ei, env := range grp.Environment {
 			for si, srv := range env.Servers {
 				if srv.IP == ipToDelete {
-					fmt.Printf(color.InBlackOverYellow("Server '%s' with IP '%s' found in environment '%s' of group '%s'\n"), serverToDelete, srv.IP, env.Name, grp.Name)
+					fmt.Printf("Server '%s' with IP '%s' found in environment '%s' of group '%s'\n", serverToDelete, srv.IP, env.Name, grp.Name)
 					reader := bufio.NewReader(os.Stdin)
-					fmt.Print(color.InYellow("Are you sure you want to delete this server? (y/n): "))
+					fmt.Print("Are you sure you want to delete this server? (y/n): ")
 					response, err := reader.ReadString('\n')
 					if err != nil {
-						fmt.Printf(color.InRed("Error reading input: %v\n"), err)
+						fmt.Printf("Error reading input: %v\n", err)
 						return
 					}
 					serverFound = true
 					response = strings.TrimSpace(response)
 					if response == "y" || response == "yes" {
 						config.Groups[gi].Environment[ei].Servers = append(env.Servers[:si], env.Servers[si+1:]...)
-						fmt.Println(color.InGreen("Server deleted successfully!"))
+						fmt.Println("Server deleted successfully!")
 					} else {
-						fmt.Println(color.InYellow("Server deletion aborted."))
+						fmt.Println("Server deletion aborted.")
 					}
 					break
 				}
@@ -310,21 +309,21 @@ func deleteServerNonInteractive() {
 	}
 
 	if !serverFound {
-		fmt.Printf(color.InRed("Server '%s' with IP '%s' was not found in the configuration\n"), serverToDelete, ipToDelete)
+		fmt.Printf("Server '%s' with IP '%s' was not found in the configuration\n", serverToDelete, ipToDelete)
 		return
 	}
 
 	if cleanConfig {
-		fmt.Println(color.InGreenOverBlack("Cleaning configuration..."))
+		fmt.Println("Cleaning configuration...")
 		cleanConfiguration(&config)
 	}
 
 	viper.Set("groups", config.Groups)
 	if err := viper.WriteConfig(); err != nil {
-		fmt.Printf(color.InRed("Error: Failed to write configuration: %v\n"), err)
+		fmt.Printf("Error: Failed to write configuration: %v\n", err)
 		return
 	}
-	fmt.Println(color.InGreen("Configuration updated successfully"))
+	fmt.Println("Configuration updated successfully")
 }
 
 func cleanConfiguration(config *store.Config) {
@@ -334,12 +333,12 @@ func cleanConfiguration(config *store.Config) {
 			env := &group.Environment[ei]
 			if len(env.Servers) == 0 {
 				group.Environment = append(group.Environment[:ei], group.Environment[ei+1:]...)
-				fmt.Printf(color.InCyan("Removed empty environment: %s\n"), env.Name)
+				fmt.Printf("Removed empty environment: %s\n", env.Name)
 			}
 		}
 		if len(group.Environment) == 0 {
 			config.Groups = append(config.Groups[:gi], config.Groups[gi+1:]...)
-			fmt.Printf(color.InCyan("Removed empty group: %s\n"), group.Name)
+			fmt.Printf("Removed empty group: %s\n", group.Name)
 		}
 	}
 }

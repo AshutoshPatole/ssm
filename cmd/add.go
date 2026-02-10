@@ -8,7 +8,6 @@ import (
 	"github.com/AshutoshPatole/ssm/internal/security"
 	"github.com/AshutoshPatole/ssm/internal/ssh"
 	"github.com/AshutoshPatole/ssm/internal/store"
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +37,7 @@ This will add a server with hostname example.com, username myuser, group mygroup
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			logrus.Debug("No hostname provided")
-			return errors.New(color.InRed("Requires hostname of the machine. Please provide a hostname."))
+			return errors.New("requires hostname of the machine. Please provide a hostname")
 		}
 		logrus.Debugf("Hostname provided: %s", args[0])
 		return nil
@@ -53,7 +52,7 @@ This will add a server with hostname example.com, username myuser, group mygroup
 		}
 		if !validEnvironment {
 			logrus.Debugf("Invalid environment value: %s", environment)
-			logrus.Fatalln(color.InRed(fmt.Sprintf("Invalid environment value. Allowed values are: %v", allowedEnvironmentValues)))
+			logrus.Fatalf("Invalid environment value. Allowed values are: %v", allowedEnvironmentValues)
 		}
 		logrus.Debugf("Adding server with hostname: %s", args[0])
 		addServer(args[0])
@@ -62,11 +61,11 @@ This will add a server with hostname example.com, username myuser, group mygroup
 
 func addServer(host string) {
 	logrus.Debugf("Attempting to add server: %s", host)
-	fmt.Println(color.InYellow("Please enter the password for the server:"))
+	fmt.Println("Please enter the password for the server:")
 	password, err := ssh.AskPassword()
 	if err != nil {
 		logrus.Debugf("Error reading password: %v", err)
-		logrus.Fatal(color.InRed("Error reading password. Please try again."))
+		logrus.Fatal("Error reading password. Please try again.")
 	}
 
 	if rdpConnectionString {
@@ -76,19 +75,19 @@ func addServer(host string) {
 		err = security.StoreCredentials(credentialKey, password)
 		if err != nil {
 			logrus.Debugf("Error storing credential: %v", err)
-			logrus.Fatalln(color.InRed("Error storing credential: " + err.Error()))
+			logrus.Fatalln("Error storing credential: " + err.Error())
 		}
 		logrus.Debug("Saving RDP connection details")
 		store.Save(group, environment, host, username, alias, credentialKey, true)
-		fmt.Println(color.InGreen("RDP connection details saved successfully!"))
+		fmt.Println("RDP connection details saved successfully!")
 	} else {
 		logrus.Debug("Saving SSH connection details")
 		store.Save(group, environment, host, username, alias, "", false)
 		logrus.Debug("Initializing SSH connection")
 		ssh.InitSSHConnection(username, password, host, group, environment, alias, setupDotFiles)
-		fmt.Println(color.InGreen("SSH connection details saved and initialized successfully!"))
+		fmt.Println("SSH connection details saved and initialized successfully!")
 	}
-	fmt.Printf(color.InCyan("Server %s added to group %s with alias %s in %s environment.\n"), host, group, alias, environment)
+	fmt.Printf("Server %s added to group %s with alias %s in %s environment.\n", host, group, alias, environment)
 }
 
 func init() {

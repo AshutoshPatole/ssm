@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -16,7 +15,7 @@ var c Config
 func Save(group, environment, host, user, alias, password string, isRDP bool) {
 	err := viper.Unmarshal(&c)
 	if err != nil {
-		logrus.Fatal(color.InRed(err.Error()))
+		logrus.Fatal(err.Error())
 	}
 
 	doesGroupExist := false
@@ -71,25 +70,29 @@ func Save(group, environment, host, user, alias, password string, isRDP bool) {
 		} else {
 			isDuplicate := checkDuplicateServer(server, c.Groups[groupIndex].Environment[environmentIndex].Servers)
 			if isDuplicate {
-				logrus.Println(color.InYellow("Duplicate server found in group"))
+				logrus.Println("Duplicate server found in group")
 			} else {
 				c.Groups[groupIndex].Environment[environmentIndex].Servers = append(c.Groups[groupIndex].Environment[environmentIndex].Servers, server)
 			}
 		}
 
 	}
-	// Sort servers by Alias (a->z) in all environments before saving
-	for i := range c.Groups {
-		for j := range c.Groups[i].Environment {
-			sort.Slice(c.Groups[i].Environment[j].Servers, func(a, b int) bool {
-				return strings.ToLower(c.Groups[i].Environment[j].Servers[a].Alias) < strings.ToLower(c.Groups[i].Environment[j].Servers[b].Alias)
-			})
-		}
-	}
+	SortConfig(&c)
 	viper.Set("groups", c.Groups)
 	err = viper.WriteConfig()
 	if err != nil {
-		log.Fatal(color.InRed(err.Error()))
+		log.Fatal(err.Error())
+	}
+}
+
+// SortConfig sorts all servers in every environment by Alias (a->z, case-insensitive).
+func SortConfig(cfg *Config) {
+	for i := range cfg.Groups {
+		for j := range cfg.Groups[i].Environment {
+			sort.Slice(cfg.Groups[i].Environment[j].Servers, func(a, b int) bool {
+				return strings.ToLower(cfg.Groups[i].Environment[j].Servers[a].Alias) < strings.ToLower(cfg.Groups[i].Environment[j].Servers[b].Alias)
+			})
+		}
 	}
 }
 
@@ -106,7 +109,7 @@ func checkDuplicateServer(s Server, servers []Server) bool {
 func getIP(host string) string {
 	lookupHost, err := net.LookupHost(host)
 	if err != nil {
-		logrus.Fatal(color.InRed("Could not resolve IP from hostname"))
+		logrus.Fatal("Could not resolve IP from hostname")
 	}
 	return lookupHost[0]
 }

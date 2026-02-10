@@ -7,7 +7,6 @@ require (
 	firebase.google.com/go v3.13.0+incompatible
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/TwiN/go-color v1.4.1
 	github.com/caarlos0/go-version v0.2.2
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0

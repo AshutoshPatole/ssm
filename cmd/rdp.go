@@ -9,7 +9,6 @@ import (
 
 	"github.com/AshutoshPatole/ssm/internal/security"
 	"github.com/AshutoshPatole/ssm/internal/ssh"
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -42,7 +41,7 @@ This command will prompt for credentials if they are not stored, and then initia
 	`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 || len(args) > 1 {
-			logrus.Fatalln(color.InYellow("Usage: ssm rdp <group-name>\nYou can also filter by environment using -f <environment> (optional)"))
+			logrus.Fatalln("Usage: ssm rdp <group-name>\nYou can also filter by environment using -f <environment> (optional)")
 			os.Exit(1)
 		}
 		return nil
@@ -55,7 +54,7 @@ This command will prompt for credentials if they are not stored, and then initia
 		}
 
 		if !isRDP {
-			logrus.Fatalln(color.InRed("Selected server is not configured for RDP"))
+			logrus.Fatalln("Selected server is not configured for RDP")
 		}
 
 		logrus.Debugf("Connecting to Windows machine %s using %s user\n", hostIP, user)
@@ -77,13 +76,13 @@ func ConnectToServerRDP(user, host, credentialKey string) {
 
 	_, err := exec.LookPath("xfreerdp")
 	if err != nil {
-		logrus.Infoln(color.InRed("xfreerdp is not installed or not in PATH. Please install it and try again."))
+		logrus.Infoln("xfreerdp is not installed or not in PATH. Please install it and try again.")
 		logrus.Infoln("Required packages: pkg-mgr install xfreerdp xorg-x11-server-Xorg xorg-x11-xauth xorg-x11-xinit xorg-x11-xdm -y")
 		os.Exit(0)
 	}
 
 	if os.Getenv("DISPLAY") == "" {
-		logrus.Warnln(color.InYellow("DISPLAY environment variable is not set. X11 forwarding might not be configured correctly."))
+		logrus.Warnln("DISPLAY environment variable is not set. X11 forwarding might not be configured correctly.")
 		return
 	}
 
@@ -91,10 +90,10 @@ func ConnectToServerRDP(user, host, credentialKey string) {
 	if credentialKey != "" {
 		retrievedPassword, err := security.RetreiveCredentials(credentialKey)
 		if err != nil {
-			logrus.Warn(color.InYellow("Error retrieving stored credential: " + err.Error()))
+			logrus.Warn("Error retrieving stored credential: " + err.Error())
 			password, err = ssh.AskPassword()
 			if err != nil {
-				logrus.Fatal(color.InRed("Error reading password"))
+				logrus.Fatal("Error reading password")
 			}
 			security.StoreCredentials(credentialKey, password)
 		} else {
@@ -104,7 +103,7 @@ func ConnectToServerRDP(user, host, credentialKey string) {
 		var err error
 		password, err = ssh.AskPassword()
 		if err != nil {
-			logrus.Fatal(color.InRed("Error reading password"))
+			logrus.Fatal("Error reading password")
 		}
 	}
 
@@ -140,10 +139,10 @@ func ConnectToServerRDP(user, host, credentialKey string) {
 		cmd.Stderr = os.Stderr
 	}
 
-	logrus.Debugln(color.InGreen("Attempting RDP connection..."))
+	logrus.Debugln("Attempting RDP connection...")
 	err = cmd.Run()
 	if err != nil {
-		logrus.Fatalf(color.InRed("RDP client exited with error:"), err)
+		logrus.Fatalf("RDP client exited with error: %v", err)
 	} else {
 		logrus.Debugln("RDP client finished successfully")
 	}

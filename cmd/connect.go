@@ -9,7 +9,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AshutoshPatole/ssm/internal/ssh"
 	"github.com/AshutoshPatole/ssm/internal/store"
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -42,7 +41,7 @@ ssm connect group-name -e ppd
 	Aliases: []string{"c", "con"},
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 || len(args) > 1 {
-			fmt.Println(color.InYellow("Usage: ssm connect group-name\nYou can also pass environment using -e (optional)"))
+			fmt.Println("Usage: ssm connect group-name\nYou can also pass environment using -e (optional)")
 			os.Exit(1)
 		}
 		return nil
@@ -128,7 +127,6 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 
 	logrus.Debugf("Found %d server options", len(serverOptions))
 
-	fmt.Println(color.InGreen(selectedEnvName))
 	prompt := &survey.Select{
 		Message: "Select server",
 		Options: labels,
@@ -154,20 +152,20 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 	if selectedHostName != "" && user != "" && selectedEnvName != "" {
 		longestLabelLength := 12
 		colonWidth := 2
-		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "Host", colonWidth, selectedHostName)))
-		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "IP Address", colonWidth, selectedHostIP)))
-		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "User", colonWidth, user)))
-		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "Environment", colonWidth, selectedEnvName)))
+		fmt.Printf("%-*s: %*s\n", longestLabelLength, "Host", colonWidth, selectedHostName)
+		fmt.Printf("%-*s: %*s\n", longestLabelLength, "IP Address", colonWidth, selectedHostIP)
+		fmt.Printf("%-*s: %*s\n", longestLabelLength, "User", colonWidth, user)
+		fmt.Printf("%-*s: %*s\n", longestLabelLength, "Environment", colonWidth, selectedEnvName)
 		rdpStatus := "No"
 		if isRDP {
 			rdpStatus = "Yes"
 		}
-		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "RDP", colonWidth, rdpStatus)))
+		fmt.Printf("%-*s: %*s\n", longestLabelLength, "RDP", colonWidth, rdpStatus)
 		//ssh.Connect(user, selectedHostIP)
 		logrus.Debugf("Selected server: %s (%s)", selectedHostName, selectedHostIP)
 		return user, selectedHostIP, credentialKey, isRDP, nil
 	} else {
-		fmt.Println(color.InRed("Aborted! Bad Request"))
+		fmt.Println("Aborted! Bad Request")
 		logrus.Error("Failed to select a valid server")
 		return "", "", "", false, fmt.Errorf("invalid server selection")
 	}

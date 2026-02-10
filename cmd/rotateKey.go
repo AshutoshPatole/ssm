@@ -6,7 +6,6 @@ import (
 
 	"github.com/AshutoshPatole/ssm/internal/ssh"
 	"github.com/AshutoshPatole/ssm/internal/store"
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,7 +27,7 @@ This crucial security measure helps safeguard your infrastructure by periodicall
 By rotating keys regularly, you minimize the risk of unauthorized access even if a key is compromised.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(color.InBold(color.InYellow("Note: RDP Connections will be excluded from the key rotation process")))
+		fmt.Println("Note: RDP Connections will be excluded from the key rotation process")
 		if rotateAll {
 			rotateKeysForAll()
 		} else if rotateGroup != "" {
