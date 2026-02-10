@@ -3,6 +3,8 @@ package store
 import (
 	"log"
 	"net"
+	"sort"
+	"strings"
 
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
@@ -75,6 +77,14 @@ func Save(group, environment, host, user, alias, password string, isRDP bool) {
 			}
 		}
 
+	}
+	// Sort servers by Alias (a->z) in all environments before saving
+	for i := range c.Groups {
+		for j := range c.Groups[i].Environment {
+			sort.Slice(c.Groups[i].Environment[j].Servers, func(a, b int) bool {
+				return strings.ToLower(c.Groups[i].Environment[j].Servers[a].Alias) < strings.ToLower(c.Groups[i].Environment[j].Servers[b].Alias)
+			})
+		}
 	}
 	viper.Set("groups", c.Groups)
 	err = viper.WriteConfig()
