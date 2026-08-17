@@ -394,14 +394,6 @@ func (m model) View() string {
 	return s
 }
 
-// min returns the smaller of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // selectedFiles returns a slice of FileInfo for all selected files
 func (m model) selectedFiles() []FileInfo {
 	var files []FileInfo

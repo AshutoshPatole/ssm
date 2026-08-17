@@ -10,8 +10,12 @@ import (
 
 	"github.com/AshutoshPatole/ssm/internal/store"
 	"github.com/TwiN/go-color"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/term"
 )
 
 var (
@@ -24,9 +28,15 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete a server from the configuration",
 	Long: `Delete a server from the configuration. This command will remove a server by its IP address
-and can optionally clean up empty groups and environments.`,
+and can optionally clean up empty groups and environments.
+
+If no flags are provided, an interactive UI will be launched to select and delete servers.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		deleteServer()
+		if serverToDelete != "" {
+			deleteServerNonInteractive()
+		} else {
+			runInteractiveDelete()
+		}
 	},
 }
 
@@ -34,45 +44,238 @@ func init() {
 	rootCmd.AddCommand(deleteCmd)
 	deleteCmd.Flags().StringVarP(&serverToDelete, "server", "s", "", "server to delete (hostname or IP)")
 	deleteCmd.Flags().BoolVarP(&cleanConfig, "clean-config", "c", false, "Clean unused groups")
-	_ = deleteCmd.MarkFlagRequired("server")
 }
 
-func cleanConfiguration(config *store.Config) {
-	for gi := len(config.Groups) - 1; gi >= 0; gi-- {
-		group := &config.Groups[gi]
-		for ei := len(group.Environment) - 1; ei >= 0; ei-- {
-			env := &group.Environment[ei]
-			if len(env.Servers) == 0 {
-				group.Environment = append(group.Environment[:ei], group.Environment[ei+1:]...)
-				fmt.Printf(color.InCyan("Removed empty environment: %s\n"), env.Name)
+// Interactive UI Structures
+
+type ServerItem struct {
+	GroupIndex  int
+	EnvIndex    int
+	ServerIndex int
+	Group       string
+	Env         string
+	Name        string
+	IP          string
+}
+
+type deleteModel struct {
+	items        []ServerItem
+	selected     map[int]struct{}
+	cursor       int
+	quitting     bool
+	confirming   bool
+	status       string
+	config       *store.Config
+	scrollOffset int
+	windowHeight int
+}
+
+func initialDeleteModel(config *store.Config) deleteModel {
+	var items []ServerItem
+	for gi, group := range config.Groups {
+		for ei, env := range group.Environment {
+			for si, server := range env.Servers {
+				items = append(items, ServerItem{
+					GroupIndex:  gi,
+					EnvIndex:    ei,
+					ServerIndex: si,
+					Group:       group.Name,
+					Env:         env.Name,
+					Name:        server.HostName,
+					IP:          server.IP,
+				})
 			}
 		}
-		if len(group.Environment) == 0 {
-			config.Groups = append(config.Groups[:gi], config.Groups[gi+1:]...)
-			fmt.Printf(color.InCyan("Removed empty group: %s\n"), group.Name)
+	}
+
+	_, h, _ := term.GetSize(int(os.Stdout.Fd()))
+
+	return deleteModel{
+		items:        items,
+		selected:     make(map[int]struct{}),
+		config:       config,
+		status:       "Select servers to delete",
+		windowHeight: h,
+	}
+}
+
+func (m deleteModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m deleteModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowHeight = msg.Height
+
+	case tea.KeyMsg:
+		if m.confirming {
+			switch msg.String() {
+			case "y", "Y":
+				return m, deleteSelectedServers(m)
+			case "n", "N", "esc", "q":
+				m.confirming = false
+				m.status = "Deletion cancelled"
+			}
+			return m, nil
+		}
+
+		switch msg.String() {
+		case "ctrl+c", "q":
+			m.quitting = true
+			return m, tea.Quit
+
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+				if m.cursor < m.scrollOffset {
+					m.scrollOffset = m.cursor
+				}
+			}
+
+		case "down", "j":
+			if m.cursor < len(m.items)-1 {
+				m.cursor++
+				if m.cursor >= m.scrollOffset+m.getViewportHeight() {
+					m.scrollOffset = m.cursor - m.getViewportHeight() + 1
+				}
+			}
+
+		case " ":
+			if _, ok := m.selected[m.cursor]; ok {
+				delete(m.selected, m.cursor)
+			} else {
+				m.selected[m.cursor] = struct{}{}
+			}
+
+		case "d":
+			if len(m.selected) > 0 {
+				m.confirming = true
+				m.status = fmt.Sprintf("Delete %d selected servers? (y/n)", len(m.selected))
+			} else {
+				m.status = "No servers selected"
+			}
 		}
 	}
+	return m, nil
 }
 
-func resolveIP(input string) string {
-	ip := net.ParseIP(input)
-	if ip != nil {
-		return input // It's already an IP
-	}
-	ips, err := net.LookupIP(input)
-	if err != nil || len(ips) == 0 {
-		return "" // Unable to resolve
-	}
-	return ips[0].String()
+func (m deleteModel) getViewportHeight() int {
+	reservedLines := 5 // Header + Status + Instructions
+	return max(m.windowHeight-reservedLines, 1)
 }
 
-func deleteServer() {
-	if serverToDelete == "" {
-		fmt.Println(color.InRed("Error: Server name or IP to delete is required"))
-		fmt.Println(color.InYellow("Usage: ssm delete -s <server_name_or_ip>"))
+func (m deleteModel) View() string {
+	if m.quitting {
+		return ""
+	}
+
+	s := "Servers:\n\n"
+
+	startIdx := m.scrollOffset
+	endIdx := min(startIdx+m.getViewportHeight(), len(m.items))
+
+	for i := startIdx; i < endIdx; i++ {
+		item := m.items[i]
+		cursor := " "
+		if m.cursor == i {
+			cursor = ">"
+		}
+
+		checkbox := "[ ]"
+		if _, ok := m.selected[i]; ok {
+			checkbox = "[x]"
+		}
+
+		// Format: > [x] Group / Env / Name (IP)
+		line := fmt.Sprintf("%s %s %s / %s / %s (%s)\n", cursor, checkbox, item.Group, item.Env, item.Name, item.IP)
+		if m.cursor == i {
+			s += lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Render(line)
+		} else {
+			s += line
+		}
+	}
+
+	s += "\n"
+	if m.confirming {
+		s += lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render(m.status)
+	} else {
+		s += lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(m.status)
+	}
+
+	helpText := "Press 'space' to select, 'd' to delete, 'q' to quit"
+	if m.confirming {
+		helpText = "Press 'y' to confirm, 'n', 'q' or 'esc' to cancel"
+	}
+
+	s += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(helpText)
+
+	return s
+}
+
+// Logic to delete servers
+
+func deleteSelectedServers(m deleteModel) tea.Cmd {
+	return func() tea.Msg {
+		// We need to delete from Config.
+		// Since indices shift when we delete, it is safer to rebuild the structure or delete by IP.
+		// However, simple rebuilding is easier/safer given the nested structure.
+
+		ipsToDelete := make(map[string]struct{})
+		for idx := range m.selected {
+			ipsToDelete[m.items[idx].IP] = struct{}{}
+		}
+
+		newGroups := []store.Group{}
+
+		for _, grp := range m.config.Groups {
+			newEnv := []store.Env{}
+			for _, env := range grp.Environment {
+				newServers := []store.Server{}
+				for _, srv := range env.Servers {
+					if _, deleteIt := ipsToDelete[srv.IP]; !deleteIt {
+						newServers = append(newServers, srv)
+					}
+				}
+				env.Servers = newServers
+				if len(env.Servers) > 0 {
+					newEnv = append(newEnv, env)
+				}
+			}
+			grp.Environment = newEnv
+			if len(grp.Environment) > 0 {
+				newGroups = append(newGroups, grp)
+			}
+		}
+
+		m.config.Groups = newGroups
+		viper.Set("groups", m.config.Groups)
+
+		if err := viper.WriteConfig(); err != nil {
+			logrus.Error("Failed to write config:", err)
+			return tea.Quit
+		}
+
+		return tea.Quit
+	}
+}
+
+func runInteractiveDelete() {
+	var config store.Config
+	if err := viper.Unmarshal(&config); err != nil {
+		fmt.Printf(color.InRed("Error: Failed to load configuration: %v\n"), err)
 		return
 	}
 
+	p := tea.NewProgram(initialDeleteModel(&config))
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Error running interactive delete: %v\n", err)
+	}
+}
+
+// Legacy / CLI Flag Mode
+
+func deleteServerNonInteractive() {
 	ipToDelete := resolveIP(serverToDelete)
 	if ipToDelete == "" {
 		fmt.Printf(color.InRed("Error: Unable to resolve '%s' to an IP address\n"), serverToDelete)
@@ -127,4 +330,33 @@ func deleteServer() {
 		return
 	}
 	fmt.Println(color.InGreen("Configuration updated successfully"))
+}
+
+func cleanConfiguration(config *store.Config) {
+	for gi := len(config.Groups) - 1; gi >= 0; gi-- {
+		group := &config.Groups[gi]
+		for ei := len(group.Environment) - 1; ei >= 0; ei-- {
+			env := &group.Environment[ei]
+			if len(env.Servers) == 0 {
+				group.Environment = append(group.Environment[:ei], group.Environment[ei+1:]...)
+				fmt.Printf(color.InCyan("Removed empty environment: %s\n"), env.Name)
+			}
+		}
+		if len(group.Environment) == 0 {
+			config.Groups = append(config.Groups[:gi], config.Groups[gi+1:]...)
+			fmt.Printf(color.InCyan("Removed empty group: %s\n"), group.Name)
+		}
+	}
+}
+
+func resolveIP(input string) string {
+	ip := net.ParseIP(input)
+	if ip != nil {
+		return input // It's already an IP
+	}
+	ips, err := net.LookupIP(input)
+	if err != nil || len(ips) == 0 {
+		return "" // Unable to resolve
+	}
+	return ips[0].String()
 }
