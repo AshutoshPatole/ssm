@@ -23,12 +23,12 @@ import (
 var App *firebase.App
 var Ctx = context.Background()
 
-//go:embed simple-ssh-manager-firebase-adminsdk-y7ei5-f496dc420f.json
+//go:embed simple-ssh-manager-firebase-adminsdk-y7ei5-8f40aaa4af.json
 var firebaseConfig embed.FS
 
 // InitFirebase initializes the Firebase app and assigns it to App
 func InitFirebase() error {
-	configFile, err := firebaseConfig.ReadFile("simple-ssh-manager-firebase-adminsdk-y7ei5-f496dc420f.json")
+	configFile, err := firebaseConfig.ReadFile("simple-ssh-manager-firebase-adminsdk-y7ei5-8f40aaa4af.json")
 	if err != nil {
 		return fmt.Errorf("error reading embedded config file: %v", err)
 	}
