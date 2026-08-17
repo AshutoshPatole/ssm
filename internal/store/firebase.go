@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 var App *firebase.App
@@ -56,13 +57,14 @@ func LoginUser(email, password string) (map[string]interface{}, error) {
 	// Firebase Admin SDK does not support direct login; use custom tokens or an external client for login.
 	token, err := authenticateWithFirebase(email, password)
 	if err != nil {
-		return nil, fmt.Errorf("error authenticating user: %v", err)
+		return nil, fmt.Errorf("⚠️ %v", err)
 	}
 	return token, nil
 }
 
 func authenticateWithFirebase(email, password string) (map[string]interface{}, error) {
-	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=%s", "")
+	ApiKey := os.Getenv("API_KEY")
+	url := fmt.Sprintf("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=%s", ApiKey)
 	payload := map[string]string{
 		"email":             email,
 		"password":          password,
@@ -86,7 +88,7 @@ func authenticateWithFirebase(email, password string) (map[string]interface{}, e
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("wrong Credentials: %d", resp.StatusCode)
 	}
 
 	var response map[string]interface{}

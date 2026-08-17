@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"os"
 	"ssm-v2/internal/store"
@@ -47,11 +48,17 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssm-v2.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "toggle debug logs")
 
-	// firebase init
-	err := store.InitFirebase()
+	// load env
+	err := godotenv.Load(".env.production")
 	if err != nil {
 		return
 	}
+	// firebase init
+	err = store.InitFirebase()
+	if err != nil {
+		return
+	}
+
 }
 
 // initConfig reads in config file and ENV variables if set.
