@@ -23,7 +23,7 @@ import (
 var App *firebase.App
 var Ctx = context.Background()
 
-//go:embed simple-ssh-manager-firebase-adminsdk-y7ei5-ac0913e54f.json
+//go:embed simple-ssh-manager-firebase-adminsdk-y7ei5-f496dc420f.json
 var firebaseConfig embed.FS
 
 // InitFirebase initializes the Firebase app and assigns it to App
@@ -116,19 +116,25 @@ func authenticateWithFirebase(email, password string) (map[string]interface{}, e
 		}
 	}(resp.Body)
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("wrong Credentials: %d", resp.StatusCode)
-	}
-
-	var response map[string]interface{}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
+	var response map[string]interface{}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		errorMessage := "Unknown error"
+		if errMsg, ok := response["error"].(map[string]interface{}); ok {
+			if msg, ok := errMsg["message"].(string); ok {
+				errorMessage = msg
+			}
+		}
+		return nil, fmt.Errorf("authentication failed: %s (Status: %d)", errorMessage, resp.StatusCode)
 	}
 
 	idToken, ok := response["idToken"].(string)
@@ -190,8 +196,25 @@ func ResetPassword(email string) error {
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %v", err)
+	}
+
+	var response map[string]interface{}
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling response: %v", err)
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error response from server: %d", resp.StatusCode)
+		errorMessage := "Unknown error"
+		if errMsg, ok := response["error"].(map[string]interface{}); ok {
+			if msg, ok := errMsg["message"].(string); ok {
+				errorMessage = msg
+			}
+		}
+		return fmt.Errorf("password reset failed: %s (Status: %d)", errorMessage, resp.StatusCode)
 	}
 
 	fmt.Printf("Please check your %s inbox for password reset link.\n", email)
