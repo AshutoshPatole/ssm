@@ -8,10 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	firebase "firebase.google.com/go"
 	"firebase.google.com/go/auth"
@@ -23,12 +23,16 @@ import (
 var App *firebase.App
 var Ctx = context.Background()
 
-//go:embed simple-ssh-manager-firebase-adminsdk-y7ei5-8f40aaa4af.json
+//go:embed simple-ssh-manager-firebase-adminsdk-y7ei5-66572e8c28.json
 var firebaseConfig embed.FS
+
+var httpClient = &http.Client{
+	Timeout: 15 * time.Second,
+}
 
 // InitFirebase initializes the Firebase app and assigns it to App
 func InitFirebase() error {
-	configFile, err := firebaseConfig.ReadFile("simple-ssh-manager-firebase-adminsdk-y7ei5-8f40aaa4af.json")
+	configFile, err := firebaseConfig.ReadFile("simple-ssh-manager-firebase-adminsdk-y7ei5-66572e8c28.json")
 	if err != nil {
 		return fmt.Errorf("error reading embedded config file: %v", err)
 	}
@@ -36,7 +40,7 @@ func InitFirebase() error {
 	opt := option.WithCredentialsJSON(configFile)
 	App, err = firebase.NewApp(Ctx, nil, opt)
 	if err != nil {
-		logrus.Fatal("Failed to initialize Firebase:", err)
+		return fmt.Errorf("failed to initialize Firebase: %w", err)
 	}
 
 	return nil
@@ -105,16 +109,11 @@ func authenticateWithFirebase(email, password string) (map[string]interface{}, e
 		return nil, err
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
+	resp, err := httpClient.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -141,14 +140,14 @@ func authenticateWithFirebase(email, password string) (map[string]interface{}, e
 	if !ok {
 		return nil, fmt.Errorf("error extracting ID token from response")
 	}
-	return parseToken(idToken), nil
+	return parseToken(idToken)
 }
 
-func parseToken(tokenString string) map[string]interface{} {
+func parseToken(tokenString string) (map[string]interface{}, error) {
 	// Parse the token without verification
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
 	if err != nil {
-		log.Fatalf("Error parsing token: %v", err)
+		return nil, fmt.Errorf("error parsing token: %w", err)
 	}
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		result := make(map[string]interface{})
@@ -158,11 +157,9 @@ func parseToken(tokenString string) map[string]interface{} {
 		if userID, ok := claims["user_id"]; ok {
 			result["user_id"] = userID
 		}
-		return result
-	} else {
-		log.Fatalf("Error parsing claims")
-		return nil
+		return result, nil
 	}
+	return nil, fmt.Errorf("error parsing claims from token")
 }
 
 // ResetPassword sends a password reset email to the specified user
@@ -190,7 +187,7 @@ func ResetPassword(email string) error {
 		return fmt.Errorf("error marshalling payload: %v", err)
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
+	resp, err := httpClient.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return fmt.Errorf("error sending reset request: %v", err)
 	}
@@ -217,6 +214,6 @@ func ResetPassword(email string) error {
 		return fmt.Errorf("password reset failed: %s (Status: %d)", errorMessage, resp.StatusCode)
 	}
 
-	fmt.Printf("Please check your %s inbox for password reset link.\n", email)
+	logrus.Infof("Please check your %s inbox for password reset link.", email)
 	return nil
 }
