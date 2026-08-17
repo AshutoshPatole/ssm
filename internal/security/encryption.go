@@ -3,14 +3,20 @@ package security
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"log"
+
+	"golang.org/x/crypto/pbkdf2"
 )
 
+// Salt used for PBKDF2 key derivation
+const KeySalt = "SSM_PBKDF2_SALT_v1"
+
 func GenerateEncryptionKey(password string) []byte {
-	hash := sha256.Sum256([]byte(password))
-	return hash[:]
+	return pbkdf2.Key([]byte(password), []byte(KeySalt), 100000, 32, sha256.New)
 }
 
 func EncryptData(data []byte, key []byte) string {
@@ -19,15 +25,22 @@ func EncryptData(data []byte, key []byte) string {
 	}
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Fatalf("error creating cipher: %v", err)
+		log.Printf("error creating cipher: %v", err)
+		return ""
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Fatalf("error creating GCM: %v", err)
+		log.Printf("error creating GCM: %v", err)
+		return ""
 	}
 
 	nonce := make([]byte, gcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		log.Printf("error generating nonce: %v", err)
+		return ""
+	}
+
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
 
 	return hex.EncodeToString(ciphertext)
