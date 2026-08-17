@@ -27,7 +27,6 @@ builds:
     ldflags:
       - -s -w -X github.com/AshutoshPatole/ssm-v2/cmd.version={{.Version}} -X github.com/AshutoshPatole/ssm-v2/cmd.commit={{.Commit}} -X github.com/AshutoshPatole/ssm-v2/cmd.date={{ .CommitDate }} -X github.com/AshutoshPatole/ssm-v2/cmd.builtBy={{ .CommitTimestamp }} -X github.com/AshutoshPatole/ssm-v2/cmd.treeState={{ .IsGitDirty }}
 
-
 archives:
   - format: tar.gz
     name_template: >-
@@ -47,12 +46,12 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
-
+      - "^refactor"
+      - "^chore"
 
 # .goreleaser.yaml
 nfpms:
-  -
-    id: ssmv2
+  - id: ssmv2
     package_name: ssm
 
     file_name_template: "{{ .ConventionalFileName }}"
@@ -79,7 +78,3 @@ nfpms:
     formats:
       - deb
       - rpm
-
-
-
-

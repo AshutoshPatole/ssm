@@ -1,14 +1,12 @@
 package cmd
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path"
 
 	"cloud.google.com/go/firestore"
+	"github.com/AshutoshPatole/ssm-v2/internal/security"
 	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/sirupsen/logrus"
@@ -79,19 +77,19 @@ func downloadConfigurations() {
 	publicKeyEncrypted := document.Data()["public"].(string)
 	privateKeyEncrypted := document.Data()["private"].(string)
 
-	key := generateEncryptionKey(userPassword)
+	key := security.GenerateEncryptionKey(userPassword)
 
-	yaml, err := decryptData(yamlEncrypted, key)
+	yaml, err := security.DecryptData(yamlEncrypted, key)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	publicKey, err := decryptData(publicKeyEncrypted, key)
+	publicKey, err := security.DecryptData(publicKeyEncrypted, key)
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	privateKey, err := decryptData(privateKeyEncrypted, key)
+	privateKey, err := security.DecryptData(privateKeyEncrypted, key)
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -126,30 +124,4 @@ func fetchUID(userPassword string) string {
 	}
 	userId := userMap["user_id"].(string)
 	return userId
-}
-
-func decryptData(encryptedData string, key []byte) ([]byte, error) {
-	data, err := hex.DecodeString(encryptedData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode encrypted data: %v", err)
-	}
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, fmt.Errorf("error creating cipher: %v", err)
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, fmt.Errorf("error creating GCM: %v", err)
-	}
-
-	nonceSize := gcm.NonceSize()
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error decrypting data: %v", err)
-	}
-
-	return plaintext, nil
 }

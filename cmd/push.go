@@ -2,15 +2,12 @@ package cmd
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 
 	"cloud.google.com/go/firestore"
+	"github.com/AshutoshPatole/ssm-v2/internal/security"
 	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/sirupsen/logrus"
@@ -63,11 +60,11 @@ func upload(documentID string, userPassword string) {
 	publicKey, _ := readFileAsBytes(".ssh/id_ed25519.pub")
 	privateKey, _ := readFileAsBytes(".ssh/id_ed25519")
 
-	key := generateEncryptionKey(userPassword)
+	key := security.GenerateEncryptionKey(userPassword)
 
-	encryptedSSMYaml := encryptData(ssmYaml, key)
-	encryptedPublicKey := encryptData(publicKey, key)
-	encryptedPrivateKey := encryptData(privateKey, key)
+	encryptedSSMYaml := security.EncryptData(ssmYaml, key)
+	encryptedPublicKey := security.EncryptData(publicKey, key)
+	encryptedPrivateKey := security.EncryptData(privateKey, key)
 
 	configurations := client.Collection("configurations")
 	//configurations.
@@ -95,26 +92,4 @@ func readFileAsBytes(path string) ([]byte, error) {
 		return nil, fmt.Errorf("error reading file: %v", err)
 	}
 	return fileContent, nil
-}
-
-func generateEncryptionKey(password string) []byte {
-	hash := sha256.Sum256([]byte(password))
-	return hash[:]
-}
-
-func encryptData(data []byte, key []byte) string {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		log.Fatalf("error creating cipher: %v", err)
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		log.Fatalf("error creating GCM: %v", err)
-	}
-
-	nonce := make([]byte, gcm.NonceSize())
-	ciphertext := gcm.Seal(nonce, nonce, data, nil)
-
-	return hex.EncodeToString(ciphertext)
 }
