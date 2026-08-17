@@ -17,7 +17,6 @@ builds:
     goos:
       - linux
       - windows
-      - darwin
     ignore:
       - goos: windows
         goarch: arm
@@ -30,7 +29,7 @@ builds:
 archives:
   - format: tar.gz
     name_template: >-
-      {{ .ProjectName }}_
+      ssm_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
@@ -49,7 +48,6 @@ changelog:
       - "^refactor"
       - "^chore"
 
-# .goreleaser.yaml
 nfpms:
   - id: ssmv2
     package_name: ssm
