@@ -62,7 +62,7 @@ func startUpgrade(latestRelease *GitHubRelease, latestVersion *semver.Version) {
 	fmt.Println(asciiArt)
 	fmt.Printf("Current version: %s\n", version)
 	fmt.Printf("New version available: %s\n", latestVersion)
-	fmt.Println("https://github.com/AshutoshPatole/ssm-v2/releases")
+	fmt.Println("https://github.com/AshutoshPatole/ssm/releases")
 
 	fmt.Print("Do you want to download the update? (y/n): ")
 	var answer string
@@ -82,7 +82,7 @@ type GitHubRelease struct {
 
 var (
 	owner = "AshutoshPatole"
-	repo  = "ssm-v2"
+	repo  = "ssm"
 )
 
 func getLatestRelease() (*GitHubRelease, error) {
@@ -131,21 +131,21 @@ func getAssetName() string {
 	switch operatingSystem {
 	case "darwin":
 		if arch == "arm64" {
-			return "ssm-v2_Darwin_arm64.tar.gz"
+			return "ssm_Darwin_arm64.tar.gz"
 		}
-		return "ssm-v2_Darwin_x86_64.tar.gz"
+		return "ssm_Darwin_x86_64.tar.gz"
 	case "linux":
 		if arch == "arm64" {
-			return "ssm-v2_Linux_arm64.tar.gz"
+			return "ssm_Linux_arm64.tar.gz"
 		} else if arch == "386" {
-			return "ssm-v2_Linux_i386.tar.gz"
+			return "ssm_Linux_i386.tar.gz"
 		}
-		return "ssm-v2_Linux_x86_64.tar.gz"
+		return "ssm_Linux_x86_64.tar.gz"
 	case "windows":
 		if arch == "arm64" {
-			return "ssm-v2_Windows_arm64.zip"
+			return "ssm_Windows_arm64.zip"
 		}
-		return "ssm-v2_Windows_x86_64.zip"
+		return "ssm_Windows_x86_64.zip"
 	default:
 		logrus.Fatalf("Unsupported operating system: %s", operatingSystem)
 		return ""

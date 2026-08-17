@@ -6,9 +6,9 @@ import (
 	"path"
 
 	"cloud.google.com/go/firestore"
-	"github.com/AshutoshPatole/ssm-v2/internal/security"
-	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
-	"github.com/AshutoshPatole/ssm-v2/internal/store"
+	"github.com/AshutoshPatole/ssm/internal/security"
+	"github.com/AshutoshPatole/ssm/internal/ssh"
+	"github.com/AshutoshPatole/ssm/internal/store"
 	"github.com/sirupsen/logrus"
 
 	"context"

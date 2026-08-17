@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/AshutoshPatole/ssm-v2/internal/security"
-	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
+	"github.com/AshutoshPatole/ssm/internal/security"
+	"github.com/AshutoshPatole/ssm/internal/ssh"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

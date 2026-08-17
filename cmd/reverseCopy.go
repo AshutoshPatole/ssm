@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	ssh2 "github.com/AshutoshPatole/ssm-v2/internal/ssh"
+	ssh2 "github.com/AshutoshPatole/ssm/internal/ssh"
 	"github.com/TwiN/go-color"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
