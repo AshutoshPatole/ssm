@@ -1,12 +1,15 @@
 package store
 
+import "time"
+
 type Server struct {
-	HostName string `yaml:"hostname"`
-	IP       string `yaml:"ip"`
-	Alias    string `yaml:"alias"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password,omitempty"`
-	IsRDP    bool   `yaml:"isRDP,omitempty"`
+	HostName     string    `yaml:"hostname"`
+	IP           string    `yaml:"ip"`
+	Alias        string    `yaml:"alias"`
+	User         string    `yaml:"user"`
+	Password     string    `yaml:"password,omitempty"`
+	IsRDP        bool      `yaml:"isRDP,omitempty"`
+	KeyRotatedAt time.Time `yaml:"keyRotatedAt,omitempty"`
 }
 
 type Env struct {
