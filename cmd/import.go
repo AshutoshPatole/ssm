@@ -3,13 +3,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 var (

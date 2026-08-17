@@ -6,9 +6,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"io"
 	"net/http"
 	"os"
@@ -16,6 +13,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 // updateCmd represents the update command
