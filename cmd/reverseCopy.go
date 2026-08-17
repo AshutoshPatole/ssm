@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	ssh2 "ssm-v2/internal/ssh"
 	"strings"
 )
@@ -55,10 +56,11 @@ func init() {
 	rootCmd.AddCommand(reverseCopyCmd)
 }
 
-// FileInfo holds the name and type of file
+// FileInfo holds the name, type of file, and its path
 type FileInfo struct {
 	Name  string
 	IsDir bool
+	Path  string
 }
 
 // ListFiles lists files in the given directory on the remote server
@@ -84,13 +86,12 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		}
 		parts := strings.SplitN(line, " ", 2)
 		isDir := parts[0][0] == 'd'
-		files = append(files, FileInfo{Name: parts[1], IsDir: isDir})
+		files = append(files, FileInfo{Name: parts[1], IsDir: isDir, Path: filepath.Join(remoteDir, parts[1])})
 	}
 
 	return files, nil
 }
 
-// DownloadFile downloads a file or zips a directory from the remote server
 func DownloadFile(client *ssh.Client, remoteFile, localFile string, isDir bool) error {
 	if isDir {
 		return tarAndDownloadDir(client, remoteFile, localFile)
@@ -140,7 +141,7 @@ func tarAndDownloadDir(client *ssh.Client, remoteDir, localFile string) error {
 		_ = session.Close()
 	}(session)
 
-	tarCmd := fmt.Sprintf("cd %s && tar -czf /tmp/dir.tar.gz .", remoteDir)
+	tarCmd := fmt.Sprintf("tar -czf /tmp/dir.tar.gz -C %s .", remoteDir)
 	output, err := session.CombinedOutput(tarCmd)
 	if err != nil {
 		return fmt.Errorf("failed to tar directory: %w, output: %s", err, string(output))
@@ -156,18 +157,25 @@ type downloadMsg struct {
 }
 
 type model struct {
-	client      *ssh.Client
-	files       []FileInfo
-	selected    map[int]struct{}
-	cursor      int
-	status      string
-	downloading bool
+	client         *ssh.Client
+	files          []FileInfo
+	selected       map[int]struct{}
+	cursor         int
+	status         string
+	downloading    bool
+	directoryStack []string // Stack to maintain navigation history
 }
 
 func initialModel(client *ssh.Client, files []FileInfo) model {
-	return model{client: client, files: files, selected: make(map[int]struct{}), cursor: 0, status: "Select files to download"}
+	return model{
+		client:         client,
+		files:          files,
+		selected:       make(map[int]struct{}),
+		cursor:         0,
+		status:         "Select files to download",
+		directoryStack: []string{"."}, // Start at the root directory
+	}
 }
-
 func (m model) Init() tea.Cmd {
 	return nil
 }
@@ -190,11 +198,46 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 
-		case "enter":
+		case " ":
+			// Toggle selection of the file or directory
 			if _, ok := m.selected[m.cursor]; ok {
 				delete(m.selected, m.cursor)
 			} else {
 				m.selected[m.cursor] = struct{}{}
+			}
+
+		case "enter":
+			selectedFile := m.files[m.cursor]
+			if selectedFile.IsDir {
+				// Navigate into the directory
+				currentDir := m.directoryStack[len(m.directoryStack)-1]
+				newDir := filepath.Join(currentDir, selectedFile.Name)
+				files, err := ListFiles(m.client, newDir)
+				if err != nil {
+					m.status = fmt.Sprintf("Failed to list files: %v", err)
+					return m, nil
+				}
+				m.directoryStack = append(m.directoryStack, newDir)
+				m.files = files
+				m.cursor = 0
+				m.selected = make(map[int]struct{})
+				m.status = fmt.Sprintf("Navigated into directory: %s", selectedFile.Name)
+			}
+
+		case "backspace":
+			// Navigate back to the previous directory
+			if len(m.directoryStack) > 1 {
+				m.directoryStack = m.directoryStack[:len(m.directoryStack)-1]
+				prevDir := m.directoryStack[len(m.directoryStack)-1]
+				files, err := ListFiles(m.client, prevDir)
+				if err != nil {
+					m.status = fmt.Sprintf("Failed to list files: %v", err)
+					return m, nil
+				}
+				m.files = files
+				m.cursor = 0
+				m.selected = make(map[int]struct{})
+				m.status = fmt.Sprintf("Returned to directory: %s", prevDir)
 			}
 
 		case "d":
@@ -241,7 +284,10 @@ func (m model) View() string {
 
 	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 	s += "\n" + statusStyle.Render(m.status)
-	s += "\n\nPress 'd' to download selected files"
+	s += "\n\nPress 'space' to select/deselect files"
+	s += "\nPress 'enter' to navigate into directory"
+	s += "\nPress 'backspace' to navigate back to previous directory"
+	s += "\nPress 'd' to download selected files"
 	s += "\nPress 'q' to quit"
 
 	return s
@@ -262,7 +308,7 @@ func downloadFiles(client *ssh.Client, files []FileInfo) tea.Cmd {
 			if file.IsDir {
 				localFile += ".tar.gz"
 			}
-			err := DownloadFile(client, file.Name, localFile, file.IsDir)
+			err := DownloadFile(client, file.Path, localFile, file.IsDir)
 			if err != nil {
 				return downloadMsg{success: false, err: err, file: file.Name}
 			}
