@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"ssm-v2/internal/ssh"
 	"ssm-v2/internal/store"
 )
 
 var (
-	email    string
-	password string
+	email string
 )
 
 // registerCmd represents the register command
@@ -18,6 +18,7 @@ var registerCmd = &cobra.Command{
 	Short: "Register a user for ssm",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		password, _ := ssh.AskPassword()
 		user, err := store.RegisterUser(email, password)
 		if err != nil {
 			logrus.Fatalln(err)
@@ -29,8 +30,6 @@ var registerCmd = &cobra.Command{
 func init() {
 	authCmd.AddCommand(registerCmd)
 	registerCmd.Flags().StringVarP(&email, "email", "e", "", "email address")
-	registerCmd.Flags().StringVarP(&password, "password", "p", "", "password")
 	_ = registerCmd.MarkFlagRequired("email")
-	_ = registerCmd.MarkFlagRequired("password")
 
 }

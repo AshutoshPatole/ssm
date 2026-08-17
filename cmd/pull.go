@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"path"
+	"ssm-v2/internal/ssh"
 	"ssm-v2/internal/store"
 
 	"context"
@@ -18,7 +19,7 @@ var pullCmd = &cobra.Command{
 	Short: "Pull your configurations from the cloud",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("pull called")
+
 		if store.App == nil {
 			fmt.Println("Firebase app is not initialized. Please run the sync command first.")
 			return
@@ -76,6 +77,7 @@ func saveFile(filename string, data []byte, permission uint32) {
 }
 
 func fetchUID() string {
+	userPassword, _ := ssh.AskPassword()
 	userMap, err := store.LoginUser(userEmail, userPassword)
 	if err != nil {
 		panic(err)
