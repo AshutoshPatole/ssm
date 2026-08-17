@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"embed"
+	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -11,8 +12,10 @@ import (
 )
 
 var (
-	cfgFile string
-	verbose bool
+	cfgFile     string
+	verbose     bool
+	version     = "dev"
+	showVersion bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -28,7 +31,12 @@ It simplifies the management of SSH profiles with commands to register users, im
 		} else {
 			logrus.SetLevel(logrus.InfoLevel)
 		}
-
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		if showVersion {
+			fmt.Println("Version:", version)
+			return
+		}
 	},
 }
 
@@ -48,6 +56,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssm-v2.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "toggle debug logs")
+	rootCmd.PersistentFlags().BoolVar(&showVersion, "version", false, "Show version")
 
 	// Note: Not sure if this is right method, but I am finding it difficult
 	// to handle .env files and the firebase config file
