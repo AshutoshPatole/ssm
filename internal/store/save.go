@@ -56,20 +56,23 @@ func Save(group, environment, host, user, alias string) {
 		c.Groups = append(c.Groups, newGroup)
 		groupIndex = len(c.Groups) - 1
 
-	}
-	if !doesEnvironmentExist {
-		newEnv := Env{
-			Name:    environment,
-			Servers: []Server{server},
-		}
-		c.Groups[groupIndex].Environment = append(c.Groups[groupIndex].Environment, newEnv)
-		environmentIndex = len(c.Groups[groupIndex].Environment) - 1
-	}
-	isDuplicate := checkDuplicateServer(server, c.Groups[groupIndex].Environment[environmentIndex].Servers)
-	if isDuplicate {
-		fmt.Println(color.InYellow("Duplicate server found in group"))
 	} else {
-		c.Groups[groupIndex].Environment[environmentIndex].Servers = append(c.Groups[groupIndex].Environment[environmentIndex].Servers, server)
+		if !doesEnvironmentExist {
+			newEnv := Env{
+				Name:    environment,
+				Servers: []Server{server},
+			}
+			c.Groups[groupIndex].Environment = append(c.Groups[groupIndex].Environment, newEnv)
+			environmentIndex = len(c.Groups[groupIndex].Environment) - 1
+		} else {
+			isDuplicate := checkDuplicateServer(server, c.Groups[groupIndex].Environment[environmentIndex].Servers)
+			if isDuplicate {
+				fmt.Println(color.InYellow("Duplicate server found in group"))
+			} else {
+				c.Groups[groupIndex].Environment[environmentIndex].Servers = append(c.Groups[groupIndex].Environment[environmentIndex].Servers, server)
+			}
+		}
+
 	}
 	viper.Set("groups", c.Groups)
 	err = viper.WriteConfig()
