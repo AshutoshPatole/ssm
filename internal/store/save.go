@@ -50,7 +50,6 @@ func Save(group, environment, host, user, alias string) {
 	if !doesGroupExist {
 		newGroup := Group{
 			Name:        group,
-			User:        user,
 			Environment: []Env{env},
 		}
 		c.Groups = append(c.Groups, newGroup)

@@ -73,7 +73,6 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 
 	for _, grp := range config.Groups {
 		if grp.Name == group {
-			user = grp.User
 			for _, env := range grp.Environment {
 				if environment != "" {
 					if environment == env.Name {
@@ -83,7 +82,7 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 								Environment: env.Name,
 								HostName:    server.HostName,
 								IP:          server.IP,
-								User:        user,
+								User:        server.User,
 							}
 							serverOptions = append(serverOptions, serverOption)
 						}
@@ -95,6 +94,7 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 							Environment: env.Name,
 							HostName:    server.HostName,
 							IP:          server.IP,
+							User:        server.User,
 						}
 						serverOptions = append(serverOptions, serverOption)
 					}
@@ -123,6 +123,7 @@ func ListToConnectServers(group, environment string) (string, string, error) {
 			selectedEnvName = serverOption.Environment
 			selectedHostName = strings.Split(serverOption.HostName, " (")[0]
 			selectedHostIP = serverOption.IP
+			user = serverOption.User
 			break
 		}
 	}

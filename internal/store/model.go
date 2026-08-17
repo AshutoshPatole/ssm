@@ -14,7 +14,6 @@ type Env struct {
 
 type Group struct {
 	Name        string `yaml:"name"`
-	User        string `yaml:"user"`
 	Environment []Env  `yaml:"environment"`
 }
 
