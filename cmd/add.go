@@ -47,7 +47,7 @@ func addServer(host string) {
 	if err != nil {
 		log.Fatal(color.InRed("Error reading password"))
 	}
-	ssh.InitSSHConnection(username, password, host)
+	ssh.InitSSHConnection(username, password, host, group, environment, alias)
 }
 
 func init() {
