@@ -7,7 +7,6 @@ import (
 
 	"github.com/AshutoshPatole/ssm/internal/ssh"
 	"github.com/AshutoshPatole/ssm/internal/store"
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -51,7 +50,7 @@ func readFile() {
 	}
 
 	if !allGroup && groupName == "" {
-		logrus.Fatal(color.InRed("Please specify a group name with --group or use --all to import all groups"))
+		logrus.Fatal("Please specify a group name with --group or use --all to import all groups")
 	}
 
 	if allGroup {

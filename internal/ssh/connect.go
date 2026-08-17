@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
@@ -63,7 +62,7 @@ func NewSSHClient(user, host string) (*ssh.Client, error) {
 
 	_, err := os.Stat(privateKey)
 	if os.IsNotExist(err) {
-		logrus.Fatal(color.InRed("ED25519 private key does not exists on the local system"))
+		logrus.Fatal("ED25519 private key does not exists on the local system")
 	}
 	key, err := os.ReadFile(privateKey)
 	if err != nil {
@@ -86,7 +85,7 @@ func NewSSHClient(user, host string) (*ssh.Client, error) {
 	}
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host, 22), config)
 	if err != nil {
-		logrus.Fatal(color.InRed(err.Error()))
+		logrus.Fatal(err.Error())
 	}
 
 	return client, nil

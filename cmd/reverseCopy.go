@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	ssh2 "github.com/AshutoshPatole/ssm/internal/ssh"
-	"github.com/TwiN/go-color"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/sirupsen/logrus"
@@ -29,7 +28,7 @@ var reverseCopyCmd = &cobra.Command{
 	Long:    `Download files or directories from a remote machine. The default location for saving is the current working directory.`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 || len(args) > 1 {
-			fmt.Println(color.InYellow("Usage: ssm reverse-copy group-name\nYou can also pass an environment using -e (optional)"))
+			fmt.Println("Usage: ssm reverse-copy group-name\nYou can also pass an environment using -e (optional)")
 			os.Exit(1)
 		}
 		return nil
@@ -43,7 +42,7 @@ var reverseCopyCmd = &cobra.Command{
 		}
 
 		if isRDP {
-			fmt.Println(color.InRed("Reverse copy operation is not supported for Windows machines (RDP connections)."))
+			fmt.Println("Reverse copy operation is not supported for Windows machines (RDP connections).")
 			return
 		}
 
