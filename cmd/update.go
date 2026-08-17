@@ -22,8 +22,8 @@ import (
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "checks for latest update",
-	Long:  ``,
+	Short: "Check and install the latest version of the application",
+	Long:  `This command checks for the latest version of the application from the GitHub repository and provides an option to download and install it if an update is available.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		updateAvailable, latestRelease, latestVersion := CheckForUpdates()
 		if updateAvailable {
@@ -38,6 +38,8 @@ func init() {
 	rootCmd.AddCommand(updateCmd)
 }
 
+// CheckForUpdates compares the current version with the latest release on GitHub
+// and returns whether an update is available along with release information
 func CheckForUpdates() (bool, *GitHubRelease, *semver.Version) {
 	currentVersion, err := semver.NewVersion(version)
 	if err != nil {
@@ -57,6 +59,8 @@ func CheckForUpdates() (bool, *GitHubRelease, *semver.Version) {
 	return latestVersion.GreaterThan(currentVersion), latestRelease, latestVersion
 }
 
+// startUpgrade initiates the upgrade process by displaying version information
+// and prompting the user to confirm the download
 func startUpgrade(latestRelease *GitHubRelease, latestVersion *semver.Version) {
 
 	fmt.Println(asciiArt)
@@ -72,6 +76,7 @@ func startUpgrade(latestRelease *GitHubRelease, latestVersion *semver.Version) {
 	}
 }
 
+// GitHubRelease represents the structure of a GitHub release API response
 type GitHubRelease struct {
 	TagName string `json:"tag_name"`
 	Assets  []struct {
@@ -85,6 +90,7 @@ var (
 	repo  = "ssm"
 )
 
+// getLatestRelease fetches the latest release information from GitHub
 func getLatestRelease() (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 	resp, err := http.Get(url)
@@ -104,6 +110,7 @@ func getLatestRelease() (*GitHubRelease, error) {
 	return &release, nil
 }
 
+// downloadUpdate initiates the download of the latest release for the current system
 func downloadUpdate(release *GitHubRelease) {
 	assetName := getAssetName()
 	var downloadURL string
@@ -124,6 +131,7 @@ func downloadUpdate(release *GitHubRelease) {
 	logrus.Debugf("Update downloaded as %s\n", assetName)
 }
 
+// getAssetName determines the appropriate asset name based on the current operating system and architecture
 func getAssetName() string {
 	operatingSystem := runtime.GOOS
 	arch := runtime.GOARCH
@@ -152,6 +160,7 @@ func getAssetName() string {
 	}
 }
 
+// upgrade handles the process of downloading and installing the update
 func upgrade(downloadURL string, assetName string) {
 	tempDir, err := os.MkdirTemp("", "ssm-update")
 	if err != nil {
@@ -189,6 +198,7 @@ func upgrade(downloadURL string, assetName string) {
 
 }
 
+// downloadFile downloads a file from the given URL and saves it to the specified filepath
 func downloadFile(url, filepath string) error {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -206,6 +216,7 @@ func downloadFile(url, filepath string) error {
 	return err
 }
 
+// extractAndGetBinary extracts the binary from the downloaded archive
 func extractAndGetBinary(archivePath, destDir string) (string, error) {
 	if strings.HasSuffix(archivePath, ".tar.gz") {
 		return extractTarGz(archivePath, destDir)
@@ -215,6 +226,7 @@ func extractAndGetBinary(archivePath, destDir string) (string, error) {
 	return "", fmt.Errorf("unsupported archive format")
 }
 
+// extractTarGz extracts a .tar.gz archive and returns the path to the binary
 func extractTarGz(archivePath, destDir string) (string, error) {
 	file, err := os.Open(archivePath)
 	if err != nil {
@@ -269,6 +281,7 @@ func extractTarGz(archivePath, destDir string) (string, error) {
 	return binaryPath, nil
 }
 
+// extractZip extracts a .zip archive and returns the path to the binary
 func extractZip(archivePath, destDir string) (string, error) {
 	r, err := zip.OpenReader(archivePath)
 	if err != nil {
@@ -320,6 +333,7 @@ func extractZip(archivePath, destDir string) (string, error) {
 	return binaryPath, nil
 }
 
+// installBinary installs the binary to /usr/local/bin on Linux systems
 func installBinary(binaryPath string) error {
 	commands := []string{"sudo rm -f /usr/local/bin/ssm", fmt.Sprintf("sudo mv %s /usr/local/bin/ssm", binaryPath), "sudo chmod +x /usr/local/bin/ssm"}
 	for _, cmdStr := range commands {
@@ -334,6 +348,7 @@ func installBinary(binaryPath string) error {
 	return nil
 }
 
+// handleWindowsUpdate manages the update process for Windows systems
 func handleWindowsUpdate(archivePath string) error {
 	extractDir := filepath.Dir(archivePath)
 

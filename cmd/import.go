@@ -51,12 +51,12 @@ func readFile() {
 	}
 
 	if !allGroup && groupName == "" {
-		logrus.Fatal(color.InRed("Either specify one group name or use --all flag to import everything"))
+		logrus.Fatal(color.InRed("Please specify a group name with --group or use --all to import all groups"))
 	}
 
 	if allGroup {
 		for _, group := range config.Groups {
-			fmt.Println("Importing ", group.Name)
+			fmt.Println("Importing group : ", group.Name)
 			if err != nil {
 				logrus.Fatalln(err)
 				return

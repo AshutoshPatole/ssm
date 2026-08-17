@@ -20,7 +20,7 @@ import (
 var pullCmd = &cobra.Command{
 	Use:   "pull",
 	Short: "Pull your configurations from the cloud",
-	Long:  ``,
+	Long:  `Retrieves and applies your stored configurations from the cloud, including SSH keys, shell configurations, and other settings.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Initialize Firebase here
 		if err := store.InitFirebase(); err != nil {
@@ -30,7 +30,7 @@ var pullCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if store.App == nil {
-			fmt.Println("Firebase app is not initialized. Please run the sync command first.")
+			fmt.Println("Firebase app is not initialized. Please run the sync command first to set up the connection.")
 			return
 		}
 		downloadConfigurations()
@@ -41,6 +41,7 @@ func init() {
 	syncCmd.AddCommand(pullCmd)
 }
 
+// downloadConfigurations retrieves user configurations from Firestore, decrypts them, and saves them to the local system
 func downloadConfigurations() {
 	client, err := store.App.Firestore(context.Background())
 	if err != nil {
@@ -56,16 +57,16 @@ func downloadConfigurations() {
 	userPassword, _ := ssh.AskPassword()
 	uid := fetchUID(userPassword)
 
-	logrus.Debugf("Fetching user configurations %s", uid)
+	logrus.Debugf("Fetching user configurations for UID: %s", uid)
 
 	document, err := client.Collection("configurations").Doc(uid).Get(context.Background())
 	if err != nil {
-		logrus.Info("Did not found any configuration for current user")
+		logrus.Info("No configuration found for the current user")
 		logrus.Debugf(err.Error())
 		return
 	}
 	if document.Exists() {
-		logrus.Debugf("Found configuration for current user %s", uid)
+		logrus.Debugf("Found configuration for user with UID: %s", uid)
 	}
 
 	userHomeDir, err := os.UserHomeDir()
@@ -118,7 +119,7 @@ func downloadConfigurations() {
 		logrus.Fatal(err)
 	}
 
-	// check if .ssh exists at home
+	// Ensure .ssh directory exists in the user's home directory
 	sshDir := userHomeDir + "/.ssh"
 	_, err = os.Stat(sshDir)
 	if os.IsNotExist(err) {
@@ -127,6 +128,8 @@ func downloadConfigurations() {
 			logrus.Fatal(err)
 		}
 	}
+
+	// Map of files to be saved with their respective data and permissions
 	files := map[string]struct {
 		data        []byte
 		permissions os.FileMode
@@ -143,7 +146,7 @@ func downloadConfigurations() {
 	for filePath, fileInfo := range files {
 		fullPath := path.Join(userHomeDir, filePath)
 		logrus.Infof("Attempting to save file: %s", fullPath)
-		logrus.Debugf("File content length: %d", len(fileInfo.data))
+		logrus.Debugf("File content length: %d bytes", len(fileInfo.data))
 
 		if err := saveFile(fullPath, fileInfo.data, fileInfo.permissions); err != nil {
 			logrus.Errorf("Failed to save %s: %v", filePath, err)
@@ -151,6 +154,7 @@ func downloadConfigurations() {
 	}
 }
 
+// saveFile writes data to a file with specified permissions
 func saveFile(filename string, data []byte, permission os.FileMode) error {
 	err := os.WriteFile(filename, data, permission)
 	if err != nil {
@@ -160,6 +164,7 @@ func saveFile(filename string, data []byte, permission os.FileMode) error {
 	return nil
 }
 
+// fetchUID retrieves the user ID using the provided password
 func fetchUID(userPassword string) string {
 	userMap, err := store.LoginUser(userEmail, userPassword)
 	if err != nil {

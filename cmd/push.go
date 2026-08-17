@@ -18,7 +18,7 @@ import (
 var pushCmd = &cobra.Command{
 	Use:   "push",
 	Short: "Push your configuration to the cloud",
-	Long:  ``,
+	Long:  `Upload your local configuration files to the cloud storage for easy synchronization across devices.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// Initialize Firebase here
 		if err := store.InitFirebase(); err != nil {
@@ -43,6 +43,7 @@ func init() {
 	syncCmd.AddCommand(pushCmd)
 }
 
+// upload encrypts and uploads the user's configuration files to Firestore
 func upload(documentID string, userPassword string) {
 
 	client, err := store.App.Firestore(context.Background())
@@ -88,9 +89,10 @@ func upload(documentID string, userPassword string) {
 	if err != nil {
 		logrus.Fatalf("error adding configuration: %v", err)
 	}
-	logrus.Infof("Configuration uploaded with reference %s", documentID)
+	logrus.Infof("Configuration successfully uploaded with reference ID: %s", documentID)
 }
 
+// readFileAsBytes reads the content of a file and returns it as a byte slice
 func readFileAsBytes(path string) ([]byte, error) {
 
 	homeDir, err := os.UserHomeDir()

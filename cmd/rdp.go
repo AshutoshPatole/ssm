@@ -23,15 +23,26 @@ var rdpCmd = &cobra.Command{
 	Use:   "rdp",
 	Short: "Connect to Windows servers using RDP",
 	Long: `
-To connect to Windows servers using RDP:
-ssm rdp group-name
+The rdp command allows you to establish Remote Desktop Protocol (RDP) connections to Windows servers.
 
-You can also specify which environments to list:
-ssm rdp group-name -f ppd
+Usage:
+		ssm rdp <group-name>
+
+You can optionally filter the list of servers by environment:
+		ssm rdp <group-name> -f <environment>
+
+Examples:
+		1. Connect to a server in the "production" group:
+					ssm rdp production
+
+		2. Connect to a server in the "staging" group, filtering for the "ppd" environment:
+					ssm rdp staging -f ppd
+
+This command will prompt for credentials if they are not stored, and then initiate an RDP connection using xfreerdp.
 	`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 || len(args) > 1 {
-			logrus.Fatalln(color.InYellow("Usage: ssm rdp group-name\nYou can also pass environment using -e (optional)"))
+			logrus.Fatalln(color.InYellow("Usage: ssm rdp <group-name>\nYou can also filter by environment using -f <environment> (optional)"))
 			os.Exit(1)
 		}
 		return nil

@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// serverOption represents a single server option with its attributes
 type serverOption struct {
 	Label         string
 	Environment   string
@@ -27,12 +28,12 @@ type serverOption struct {
 
 var filterEnvironment string
 
-// connectCmd represents the connect command
+// connectCmd represents the connect command for initiating server connections
 var connectCmd = &cobra.Command{
 	Use:   "connect",
 	Short: "Connect to the servers",
 	Long: `
-To connect to the servers use:
+Connect to servers using the following syntax:
 ssm connect group-name
 
 You can also specify which environments to list:
@@ -63,16 +64,16 @@ ssm connect group-name -e ppd
 
 func init() {
 	rootCmd.AddCommand(connectCmd)
-	connectCmd.Flags().StringVarP(&filterEnvironment, "filter", "f", "", "filter list by environment")
-	logrus.Debug("Connect command initialized")
+	connectCmd.Flags().StringVarP(&filterEnvironment, "filter", "f", "", "Filter server list by environment")
 }
 
+// ListToConnectServers retrieves and displays a list of servers for connection
 func ListToConnectServers(group, environment string) (string, string, string, bool, error) {
 	logrus.Debugf("Listing servers for group: %s, environment: %s", group, environment)
 	var config store.Config
 
 	if err := viper.Unmarshal(&config); err != nil {
-		logrus.Fatalf("Failed to unmarshal config: %v", err)
+		logrus.Fatalf("Failed to unmarshal configuration: %v", err)
 	}
 
 	selectedEnvName := ""
@@ -84,6 +85,7 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 	isRDP := false
 	credentialKey := ""
 
+	// Populate server options based on group and environment filters
 	for _, grp := range config.Groups {
 		if grp.Name == group {
 			for _, env := range grp.Environment {
@@ -137,7 +139,7 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 		return "", "", "", false, err
 	}
 
-	// Extract environment name from the selected option
+	// Extract server details from the selected option
 	for _, serverOption := range serverOptions {
 		if serverOption.Label == selectedHostName {
 			selectedEnvName = serverOption.Environment
@@ -171,6 +173,7 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 	}
 }
 
+// ConnectToServer initiates an SSH connection to the specified server
 func ConnectToServer(user, host string) {
 	logrus.Debugf("Connecting to server: %s@%s", user, host)
 	ssh.Connect(user, host)

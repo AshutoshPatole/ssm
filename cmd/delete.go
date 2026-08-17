@@ -9,7 +9,6 @@ import (
 
 	"github.com/AshutoshPatole/ssm/internal/store"
 	"github.com/TwiN/go-color"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -44,48 +43,51 @@ func cleanConfiguration(config *store.Config) {
 			env := &group.Environment[ei]
 			if len(env.Servers) == 0 {
 				group.Environment = append(group.Environment[:ei], group.Environment[ei+1:]...)
-				logrus.Debugf("Removed empty environment: %s\n", env.Name)
+				fmt.Printf(color.InCyan("Removed empty environment: %s\n"), env.Name)
 			} else {
-				logrus.Debugln("Nothing to clean")
+				fmt.Println(color.InCyan("No empty environments to clean"))
 			}
 		}
 		if len(group.Environment) == 0 {
 			config.Groups = append(config.Groups[:gi], config.Groups[gi+1:]...)
-			logrus.Debugf("Removed empty group: %s\n", group.Name)
+			fmt.Printf(color.InCyan("Removed empty group: %s\n"), group.Name)
 		}
 	}
 }
 
 func deleteServer() {
 	if serverToDelete == "" {
-		logrus.Fatal("server to delete is required")
+		fmt.Println(color.InRed("Error: Server name to delete is required"))
+		fmt.Println(color.InYellow("Usage: ssm delete -s <server_name>"))
+		return
 	}
 
 	var config store.Config
 	if err := viper.Unmarshal(&config); err != nil {
-		logrus.Fatal(err)
+		fmt.Printf(color.InRed("Error: Failed to load configuration: %v\n"), err)
+		return
 	}
 	serverFound := false
 	for gi, grp := range config.Groups {
 		for ei, env := range grp.Environment {
 			for si, srv := range env.Servers {
 				if srv.HostName == serverToDelete {
-
-					logrus.Info(color.InBlackOverRed(srv.HostName + " found in " + env.Name + " in " + grp.Name))
+					fmt.Printf(color.InBlackOverYellow("Server '%s' found in environment '%s' of group '%s'\n"), srv.HostName, env.Name, grp.Name)
 					reader := bufio.NewReader(os.Stdin)
-					fmt.Print("Are you sure you want to delete this server? (y/n): ")
+					fmt.Print(color.InYellow("Are you sure you want to delete this server? (y/n): "))
 					response, err := reader.ReadString('\n')
 					if err != nil {
-						logrus.Fatalln(err)
+						fmt.Printf(color.InRed("Error reading input: %v\n"), err)
+						return
 					}
 
 					response = strings.TrimSpace(response)
 					if response == "y" || response == "yes" {
 						serverFound = true
 						config.Groups[gi].Environment[ei].Servers = append(env.Servers[:si], env.Servers[si+1:]...)
-						logrus.Info(color.InGreen("Server deleted successfully!"))
+						fmt.Println(color.InGreen("Server deleted successfully!"))
 					} else {
-						logrus.Info(color.InYellow("Server deletion aborted."))
+						fmt.Println(color.InYellow("Server deletion aborted."))
 					}
 					break
 				}
@@ -94,16 +96,19 @@ func deleteServer() {
 	}
 
 	if !serverFound {
-		fmt.Println(color.InRed("Server " + serverToDelete + " was not found in configuration"))
+		fmt.Printf(color.InRed("Server '%s' was not found in the configuration\n"), serverToDelete)
+		return
 	}
 
 	if cleanConfig {
-		fmt.Println(color.InGreenOverBlack("Cleaning configuration"))
+		fmt.Println(color.InGreenOverBlack("Cleaning configuration..."))
 		cleanConfiguration(&config)
 	}
 
 	viper.Set("groups", config.Groups)
 	if err := viper.WriteConfig(); err != nil {
-		logrus.Fatal(err)
+		fmt.Printf(color.InRed("Error: Failed to write configuration: %v\n"), err)
+		return
 	}
+	fmt.Println(color.InGreen("Configuration updated successfully"))
 }

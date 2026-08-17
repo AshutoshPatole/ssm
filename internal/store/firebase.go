@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	firebase "firebase.google.com/go"
 	"firebase.google.com/go/auth"
@@ -38,6 +39,25 @@ func InitFirebase() error {
 		logrus.Fatalf("init firebase failed: %v", err)
 	}
 
+	return nil
+}
+
+var (
+	firebaseInitialized bool
+	firebaseInitMutex   sync.Mutex
+)
+
+// InitFirebaseOnce initializes Firebase only once
+func InitFirebaseOnce() error {
+	firebaseInitMutex.Lock()
+	defer firebaseInitMutex.Unlock()
+
+	if !firebaseInitialized {
+		if err := InitFirebase(); err != nil {
+			return err
+		}
+		firebaseInitialized = true
+	}
 	return nil
 }
 

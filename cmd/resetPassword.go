@@ -16,11 +16,6 @@ var resetPasswordCmd = &cobra.Command{
 	Short:   "Reset password for a user",
 	Long:    `This command sends a password reset email to the specified user.`,
 	Aliases: []string{"rp", "reset"},
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if err := store.InitFirebase(); err != nil {
-			logrus.Fatalln("Failed to initialize Firebase:", err)
-		}
-	},
 	Run: func(cmd *cobra.Command, args []string) {
 		err := store.ResetPassword(resetEmail)
 		if err != nil {
