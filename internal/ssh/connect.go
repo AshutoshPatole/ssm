@@ -3,15 +3,16 @@ package ssh
 import (
 	"errors"
 	"fmt"
-	"github.com/TwiN/go-color"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/ssh"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"syscall"
 	"time"
+
+	"github.com/TwiN/go-color"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh"
 )
 
 func Connect(user, server string) {
@@ -25,12 +26,10 @@ func Connect(user, server string) {
 	var sshCmd *exec.Cmd
 	switch runtime.GOOS {
 	case "linux":
-		sshCmd = exec.Command("ssh", user+"@"+server)
+		sshCmd = exec.Command("ssh -X", user+"@"+server)
 	case "darwin":
 		sshCmd = exec.Command("ssh", user+"@"+server)
 	case "windows":
-		//logrus.Error(color.InRed("SSH connection not implemented for Windows systems yet"))
-		//return
 		sshCmd = exec.Command("ssh", user+"@"+server)
 	default:
 		logrus.Error(color.InRed("Unsupported operating system"))

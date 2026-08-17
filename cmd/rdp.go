@@ -66,8 +66,9 @@ func ConnectToServerRDP(user, host, credentialKey string) {
 
 	_, err := exec.LookPath("xfreerdp")
 	if err != nil {
-		logrus.Fatalln(color.InRed("xfreerdp is not installed or not in PATH. Please install it and try again."))
-		return
+		logrus.Infoln(color.InRed("xfreerdp is not installed or not in PATH. Please install it and try again."))
+		logrus.Infoln("Required packages: pkg-mgr install xfreerdp xorg-x11-server-Xorg xorg-x11-xauth xorg-x11-xinit xorg-x11-xdm -y")
+		os.Exit(0)
 	}
 
 	if os.Getenv("DISPLAY") == "" {
@@ -84,6 +85,7 @@ func ConnectToServerRDP(user, host, credentialKey string) {
 			if err != nil {
 				logrus.Fatal(color.InRed("Error reading password"))
 			}
+			security.StoreCredentials(credentialKey, password)
 		} else {
 			password = retrievedPassword
 		}
@@ -98,14 +100,13 @@ func ConnectToServerRDP(user, host, credentialKey string) {
 	// Add a delay to ensure environment is set
 	time.Sleep(2 * time.Second)
 
-	var cmd *exec.Cmd
-
 	args := []string{
 		fmt.Sprintf("/u:%s", user),
 		fmt.Sprintf("/p:%s", string(password)),
 		fmt.Sprintf("/v:%s", host),
 		"+clipboard",
 		"/dynamic-resolution",
+		"/cert:ignore",
 		"/compression-level:2",
 		"/scale:100",
 		"/scale-desktop:100",
@@ -121,7 +122,7 @@ func ConnectToServerRDP(user, host, credentialKey string) {
 		args = append(args, "/log-level:TRACE", "/log-filters:*:TRACE")
 	}
 
-	cmd = exec.Command("xfreerdp", args...)
+	cmd := exec.Command("xfreerdp", args...)
 
 	if verbose {
 		cmd.Stdout = os.Stdout

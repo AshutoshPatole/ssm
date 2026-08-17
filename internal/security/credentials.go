@@ -15,7 +15,7 @@ func StoreCredentials(key, value string) error {
 func RetreiveCredentials(key string) (string, error) {
 	password, err := keyring.Get(appName, key)
 	if err != nil {
-		return "", fmt.Errorf("error fetching credentials", err)
+		return "", fmt.Errorf("error fetching credentials %v", err)
 	}
 	return password, nil
 }
