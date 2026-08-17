@@ -29,8 +29,9 @@ func Connect(user, server string) {
 	case "darwin":
 		sshCmd = exec.Command("ssh", user+"@"+server)
 	case "windows":
-		logrus.Error(color.InRed("SSH connection not implemented for Windows systems yet"))
-		return
+		//logrus.Error(color.InRed("SSH connection not implemented for Windows systems yet"))
+		//return
+		sshCmd = exec.Command("ssh", user+"@"+server)
 	default:
 		logrus.Error(color.InRed("Unsupported operating system"))
 		return
