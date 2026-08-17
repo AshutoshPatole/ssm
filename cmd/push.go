@@ -2,6 +2,10 @@ package cmd
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -34,7 +38,7 @@ var pushCmd = &cobra.Command{
 
 		userId := user["user_id"].(string)
 
-		upload(userId)
+		upload(userId, userPassword)
 	},
 }
 
@@ -42,7 +46,7 @@ func init() {
 	syncCmd.AddCommand(pushCmd)
 }
 
-func upload(documentID string) {
+func upload(documentID string, userPassword string) {
 
 	client, err := store.App.Firestore(context.Background())
 	if err != nil {
@@ -59,17 +63,23 @@ func upload(documentID string) {
 	publicKey, _ := readFileAsBytes(".ssh/id_ed25519.pub")
 	privateKey, _ := readFileAsBytes(".ssh/id_ed25519")
 
+	key := generateEncryptionKey(userPassword)
+
+	encryptedSSMYaml := encryptData(ssmYaml, key)
+	encryptedPublicKey := encryptData(publicKey, key)
+	encryptedPrivateKey := encryptData(privateKey, key)
+
 	configurations := client.Collection("configurations")
 	//configurations.
 	_, err = configurations.Doc(documentID).Set(context.Background(), map[string]interface{}{
-		"ssm_yaml": ssmYaml,
-		"public":   publicKey,
-		"private":  privateKey,
+		"ssm_yaml": encryptedSSMYaml,
+		"public":   encryptedPublicKey,
+		"private":  encryptedPrivateKey,
 	})
 	if err != nil {
 		logrus.Fatalf("error adding configuration: %v", err)
 	}
-	logrus.Info("Configuration uploaded with reference %s", documentID)
+	logrus.Infof("Configuration uploaded with reference %s", documentID)
 }
 
 func readFileAsBytes(path string) ([]byte, error) {
@@ -85,4 +95,26 @@ func readFileAsBytes(path string) ([]byte, error) {
 		return nil, fmt.Errorf("error reading file: %v", err)
 	}
 	return fileContent, nil
+}
+
+func generateEncryptionKey(password string) []byte {
+	hash := sha256.Sum256([]byte(password))
+	return hash[:]
+}
+
+func encryptData(data []byte, key []byte) string {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		log.Fatalf("error creating cipher: %v", err)
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		log.Fatalf("error creating GCM: %v", err)
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+
+	return hex.EncodeToString(ciphertext)
 }

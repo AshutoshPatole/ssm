@@ -87,14 +87,6 @@ func getLatestRelease() (*GitHubRelease, error) {
 	}(resp.Body)
 
 	var release GitHubRelease
-	//body, err := io.ReadAll(resp.Body)
-	//if err != nil {
-	//	fmt.Println("Error reading response body:", err)
-	//	os.Exit(1)
-	//}
-	//
-	//// Print the response body
-	//fmt.Println(string(body))
 	err = json.NewDecoder(resp.Body).Decode(&release)
 	if err != nil {
 		return nil, err
@@ -185,8 +177,6 @@ func upgrade(downloadURL string, assetName string) {
 	}
 
 	fmt.Println("Update successfully installed to /usr/local/bin")
-	return
-
 }
 
 func downloadFile(url, filepath string) error {
