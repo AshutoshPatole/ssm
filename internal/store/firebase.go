@@ -3,11 +3,14 @@ package store
 import (
 	"bytes"
 	"context"
+	"embed"
+	_ "embed"
 	"encoding/json"
 	"firebase.google.com/go"
 	"firebase.google.com/go/auth"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/api/option"
 	"io"
 	"log"
@@ -18,17 +21,22 @@ import (
 var App *firebase.App
 var Ctx = context.Background()
 
+//go:embed simple-ssh-manager-firebase-adminsdk-y7ei5-ac0913e54f.json
+var firebaseConfig embed.FS
+
 // InitFirebase initializes the Firebase app and assigns it to App
 func InitFirebase() error {
-	if App != nil {
-		return nil // Firebase app is already initialized
+	configFile, err := firebaseConfig.ReadFile("simple-ssh-manager-firebase-adminsdk-y7ei5-ac0913e54f.json")
+	if err != nil {
+		return fmt.Errorf("error reading embedded config file: %v", err)
 	}
-	opt := option.WithCredentialsFile("/home/ashu/ssm-v2/simple-ssh-manager-firebase-adminsdk-y7ei5-ac0913e54f.json")
-	var err error
+
+	opt := option.WithCredentialsJSON(configFile)
 	App, err = firebase.NewApp(Ctx, nil, opt)
 	if err != nil {
-		return err
+		logrus.Fatalf("init firebase failed: %v", err)
 	}
+
 	return nil
 }
 

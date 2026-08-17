@@ -4,11 +4,9 @@ package cmd
 import (
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
-	"os"
-	"ssm-v2/internal/store"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 )
 
 var (
@@ -27,6 +25,12 @@ var rootCmd = &cobra.Command{
 			logrus.SetLevel(logrus.DebugLevel)
 		} else {
 			logrus.SetLevel(logrus.InfoLevel)
+		}
+
+		// load env
+		err := godotenv.Load(".env.production")
+		if err != nil {
+			return
 		}
 	},
 	// Uncomment the following line if your bare application
@@ -47,18 +51,6 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssm-v2.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "toggle debug logs")
-
-	// load env
-	err := godotenv.Load(".env.production")
-	if err != nil {
-		return
-	}
-	// firebase init
-	err = store.InitFirebase()
-	if err != nil {
-		return
-	}
-
 }
 
 // initConfig reads in config file and ENV variables if set.
