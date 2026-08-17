@@ -12,7 +12,7 @@ var (
 // syncCmd represents the sync command
 var syncCmd = &cobra.Command{
 	Use:   "sync",
-	Short: "A brief description of your command",
+	Short: "Sync command lets you upload or download your public, private keys and the ssm configuration file",
 	Long:  ``,
 	//Run: func(cmd *cobra.Command, args []string) {
 	//},
