@@ -1,4 +1,4 @@
-module ssm-v2
+module github.com/AshutoshPatole/ssm-v2
 
 go 1.22
 
@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/firestore v1.16.0
 	firebase.google.com/go v3.13.0+incompatible
 	github.com/AlecAivazis/survey/v2 v2.3.7
+	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/TwiN/go-color v1.4.1
 	github.com/caarlos0/go-version v0.1.1
 	github.com/charmbracelet/bubbletea v0.26.6

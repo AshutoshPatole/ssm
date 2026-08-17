@@ -2,11 +2,12 @@ package ssh
 
 import (
 	"fmt"
+	"github.com/AshutoshPatole/ssm-v2/internal/configuration"
+	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
-	"ssm-v2/internal/configuration"
-	"ssm-v2/internal/store"
+
 	"time"
 )
 

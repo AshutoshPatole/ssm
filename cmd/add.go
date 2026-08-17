@@ -3,10 +3,10 @@ package cmd
 
 import (
 	"errors"
+	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"ssm-v2/internal/ssh"
 )
 
 var (
