@@ -1,7 +1,6 @@
 package store
 
 import (
-	"log"
 	"net"
 
 	"github.com/TwiN/go-color"
@@ -34,6 +33,7 @@ func Save(group, environment, host, user, alias, password string, isRDP bool) {
 					break
 				}
 			}
+			break
 		}
 	}
 
@@ -46,18 +46,15 @@ func Save(group, environment, host, user, alias, password string, isRDP bool) {
 		Password: password,
 	}
 
-	env := Env{
-		Name:    environment,
-		Servers: []Server{server},
-	}
 	if !doesGroupExist {
 		newGroup := Group{
-			Name:        group,
-			Environment: []Env{env},
+			Name: group,
+			Environment: []Env{{
+				Name:    environment,
+				Servers: []Server{server},
+			}},
 		}
 		c.Groups = append(c.Groups, newGroup)
-		groupIndex = len(c.Groups) - 1
-
 	} else {
 		if !doesEnvironmentExist {
 			newEnv := Env{
@@ -65,38 +62,40 @@ func Save(group, environment, host, user, alias, password string, isRDP bool) {
 				Servers: []Server{server},
 			}
 			c.Groups[groupIndex].Environment = append(c.Groups[groupIndex].Environment, newEnv)
-			environmentIndex = len(c.Groups[groupIndex].Environment) - 1
 		} else {
 			isDuplicate := checkDuplicateServer(server, c.Groups[groupIndex].Environment[environmentIndex].Servers)
 			if isDuplicate {
-				logrus.Println(color.InYellow("Duplicate server found in group"))
-			} else {
-				c.Groups[groupIndex].Environment[environmentIndex].Servers = append(c.Groups[groupIndex].Environment[environmentIndex].Servers, server)
+				logrus.Warn(color.InYellow("Duplicate server found in group"))
+				return // Return early to prevent adding duplicate
 			}
+			c.Groups[groupIndex].Environment[environmentIndex].Servers = append(c.Groups[groupIndex].Environment[environmentIndex].Servers, server)
 		}
-
 	}
-	viper.Set("groups", c.Groups)
+
 	err = viper.WriteConfig()
 	if err != nil {
-		log.Fatal(color.InRed(err.Error()))
+		logrus.Fatal(color.InRed(err.Error()))
 	}
 }
 
 func checkDuplicateServer(s Server, servers []Server) bool {
-	isDuplicate := false
 	for _, server := range servers {
-		if server.IP == s.IP {
-			isDuplicate = true
+		// Check both IP and hostname to be more thorough
+		if server.IP == s.IP || server.HostName == s.HostName {
+			return true
 		}
 	}
-	return isDuplicate
+	return false
 }
 
 func getIP(host string) string {
 	lookupHost, err := net.LookupHost(host)
 	if err != nil {
-		logrus.Fatal(color.InRed("Could not resolve IP from hostname"))
+		logrus.Error(color.InRed("Could not resolve IP from hostname"))
+		return host
+	}
+	if len(lookupHost) == 0 {
+		return host
 	}
 	return lookupHost[0]
 }
