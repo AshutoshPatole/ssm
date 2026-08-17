@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Masterminds/semver/v3"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net/http"
 )
@@ -14,36 +15,35 @@ var updateCmd = &cobra.Command{
 	Short: "checks for latest update",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(version)
-		currentVersion, err := semver.NewVersion(version)
-		if err != nil {
-			fmt.Printf("Error parsing current version: %s\n", err)
-			return
-		}
-
-		fmt.Printf("Current version: %s\n", currentVersion)
-
-		latestRelease, err := getLatestRelease()
-		if err != nil {
-			fmt.Printf("Error fetching latest release: %s\n", err)
-			return
-		}
-
-		latestVersion, err := semver.NewVersion(latestRelease.TagName)
-		if err != nil {
-			fmt.Printf("Error parsing latest version: %s\n", err)
-			return
-		}
-		if latestVersion.GreaterThan(currentVersion) {
-			fmt.Printf("New version available: %s\n", latestVersion)
-		} else {
-			fmt.Println("You're already on the latest version.")
-		}
+		CheckForUpdates()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(updateCmd)
+}
+
+func CheckForUpdates() {
+	currentVersion, err := semver.NewVersion(version)
+	if err != nil {
+		logrus.Fatalf("Error parsing current version: %s\n", err)
+	}
+
+	latestRelease, err := getLatestRelease()
+	if err != nil {
+		logrus.Fatalf("Error fetching latest release: %s\n", err)
+	}
+
+	latestVersion, err := semver.NewVersion(latestRelease.TagName)
+	if err != nil {
+		logrus.Fatalf("Error parsing latest version: %s\n", err)
+	}
+	if latestVersion.GreaterThan(currentVersion) {
+		fmt.Println(asciiArt)
+		fmt.Printf("Current version: %s\n", currentVersion)
+		fmt.Printf("New version available: %s\n", latestVersion)
+		fmt.Println("https://github.com/AshutoshPatole/ssm-v2/releases")
+	}
 }
 
 type GitHubRelease struct {

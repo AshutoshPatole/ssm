@@ -19,7 +19,7 @@ var (
 )
 
 var (
-	version   = ""
+	version   = "0.1.2"
 	commit    = ""
 	treeState = ""
 	date      = ""
@@ -60,7 +60,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssm-v2.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "toggle debug logs")
 	rootCmd.PersistentFlags().BoolVar(&showVersion, "version", false, "Show version")
-
 	// Note: Not sure if this is right method, but I am finding it difficult
 	// to handle .env files and the firebase config file
 	data, err := envFile.ReadFile(".env.production")
@@ -85,6 +84,8 @@ func init() {
 	if err != nil {
 		return
 	}
+
+	CheckForUpdates()
 }
 
 // initConfig reads in config file and ENV variables if set.
