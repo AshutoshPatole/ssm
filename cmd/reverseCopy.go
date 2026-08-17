@@ -50,7 +50,7 @@ var reverseCopyCmd = &cobra.Command{
 		logrus.Debug("Establishing SSH connection for ", user, "@", host)
 		client, _ := ssh2.NewSSHClient(user, host)
 
-		files, err := ListFiles(client, ".")
+		files, err := ListFiles(client, ".", false)
 		if err != nil {
 			log.Fatalf("Failed to retrieve file list: %v", err)
 		}
@@ -76,7 +76,7 @@ type FileInfo struct {
 }
 
 // ListFiles retrieves a list of files and directories from the specified remote directory
-func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
+func ListFiles(client *ssh.Client, remoteDir string, showHidden bool) ([]FileInfo, error) {
 	logrus.Debug("Retrieving file list from directory: ", remoteDir)
 	session, err := client.NewSession()
 	if err != nil {
@@ -86,7 +86,11 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		_ = session.Close()
 	}(session)
 
-	output, err := session.Output("ls -lA " + remoteDir + " | grep -v '^total' | awk '{print $1, substr($0, index($0,$9))}'")
+	lsCommand := "ls -l"
+	if showHidden {
+		lsCommand += "A"
+	}
+	output, err := session.Output(lsCommand + " " + remoteDir + " | grep -v '^total' | awk '{print $1, substr($0, index($0,$9))}'")
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute remote file listing command: %w", err)
 	}
@@ -99,6 +103,9 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		}
 		parts := strings.SplitN(line, " ", 2)
 		isDir := parts[0][0] == 'd'
+		if !showHidden && strings.HasPrefix(parts[1], ".") {
+			continue
+		}
 		files = append(files, FileInfo{Name: parts[1], IsDir: isDir, Path: filepath.Join(remoteDir, parts[1])})
 	}
 
@@ -191,6 +198,7 @@ type model struct {
 	directoryStack []string
 	scrollOffset   int
 	windowHeight   int
+	showHidden     bool
 }
 
 // initialModel creates and initializes a new model for the interactive interface
@@ -205,6 +213,7 @@ func initialModel(client *ssh.Client, files []FileInfo) model {
 		status:         "Select files to download",
 		directoryStack: []string{"."},
 		windowHeight:   h,
+		showHidden:     false,
 	}
 }
 
@@ -261,7 +270,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				currentDir := m.directoryStack[len(m.directoryStack)-1]
 				newDir := filepath.Join(currentDir, selectedFile.Name)
 				logrus.Debug("Navigating to directory: ", newDir)
-				files, err := ListFiles(m.client, newDir)
+				files, err := ListFiles(m.client, newDir, m.showHidden)
 				if err != nil {
 					m.status = fmt.Sprintf("Failed to retrieve file list: %v", err)
 					return m, nil
@@ -279,7 +288,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.directoryStack = m.directoryStack[:len(m.directoryStack)-1]
 				prevDir := m.directoryStack[len(m.directoryStack)-1]
 				logrus.Debug("Returning to directory: ", prevDir)
-				files, err := ListFiles(m.client, prevDir)
+				files, err := ListFiles(m.client, prevDir, m.showHidden)
 				if err != nil {
 					m.status = fmt.Sprintf("Failed to retrieve file list: %v", err)
 					return m, nil
@@ -296,6 +305,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status = "Downloading selected files... "
 				logrus.Debug("Initiating file download process")
 				return m, downloadFiles(m.client, m.selectedFiles())
+			}
+
+		case "a":
+			// Toggle show hidden files
+			m.showHidden = !m.showHidden
+			currentDir := m.directoryStack[len(m.directoryStack)-1]
+			files, err := ListFiles(m.client, currentDir, m.showHidden)
+			if err != nil {
+				m.status = fmt.Sprintf("Failed to retrieve file list: %v", err)
+				return m, nil
+			}
+			m.files = files
+			m.cursor = 0
+			m.selected = make(map[int]struct{})
+			if m.showHidden {
+				m.status = "Showing hidden files"
+			} else {
+				m.status = "Hiding hidden files"
 			}
 		}
 
@@ -360,6 +387,7 @@ func (m model) View() string {
 			"Press 'enter' to navigate into directory\n"+
 			"Press 'backspace' to navigate back to previous directory\n"+
 			"Press 'd' to download selected files\n"+
+			"Press 'a' to toggle hidden files\n"+
 			"Press 'q' to quit",
 	)
 
