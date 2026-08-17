@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"embed"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -27,15 +28,7 @@ var rootCmd = &cobra.Command{
 			logrus.SetLevel(logrus.InfoLevel)
 		}
 
-		// load env
-		err := godotenv.Load(".env.production")
-		if err != nil {
-			return
-		}
 	},
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -47,10 +40,38 @@ func Execute() {
 	}
 }
 
+//go:embed .env.production
+var envFile embed.FS
+
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssm-v2.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "toggle debug logs")
+
+	// Note: Not sure if this is right method, but I am finding it difficult
+	// to handle .env files and the firebase config file
+	data, err := envFile.ReadFile(".env.production")
+	if err != nil {
+		logrus.Errorf("error reading embedded env file: %v", err)
+	}
+
+	// Write the embedded data to a temporary file and load it with dotenv
+	tempFile, err := os.CreateTemp("", ".env")
+	if err != nil {
+		logrus.Errorf("error creating temporary file: %v", err)
+	}
+	defer func(tempFile *os.File) {
+		_ = tempFile.Close()
+	}(tempFile)
+
+	if _, err := tempFile.Write(data); err != nil {
+		logrus.Errorf("error writing to temporary file: %v", err)
+	}
+
+	err = godotenv.Load(tempFile.Name())
+	if err != nil {
+		return
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.
