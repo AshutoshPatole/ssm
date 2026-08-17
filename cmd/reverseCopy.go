@@ -143,7 +143,8 @@ func tarAndDownloadDir(client *ssh.Client, remoteDir, localFile string) error {
 		_ = session.Close()
 	}(session)
 
-	tarCmd := fmt.Sprintf("tar -czf /tmp/dir.tar.gz -C %s .", remoteDir)
+	dirName := filepath.Base(remoteDir)
+	tarCmd := fmt.Sprintf("tar -czf /tmp/dir.tar.gz -C %s --transform 's,^,%s/,' .", remoteDir, dirName)
 	output, err := session.CombinedOutput(tarCmd)
 	if err != nil {
 		return fmt.Errorf("failed to tar directory: %w, output: %s", err, string(output))
@@ -344,7 +345,7 @@ func (m model) selectedFiles() []FileInfo {
 func downloadFiles(client *ssh.Client, files []FileInfo) tea.Cmd {
 	return func() tea.Msg {
 		for _, file := range files {
-			localFile := "./" + file.Name
+			localFile := "./" + strings.TrimPrefix(file.Name, ".")
 			if file.IsDir {
 				localFile += ".tar.gz"
 			}
