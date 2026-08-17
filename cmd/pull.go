@@ -21,18 +21,7 @@ var pullCmd = &cobra.Command{
 	Use:   "pull",
 	Short: "Pull your configurations from the cloud",
 	Long:  `Retrieves and applies your stored configurations from the cloud, including SSH keys, shell configurations, and other settings.`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// Initialize Firebase here
-		if err := store.InitFirebase(); err != nil {
-			logrus.Fatalln("Failed to initialize Firebase:", err)
-		}
-	},
 	Run: func(cmd *cobra.Command, args []string) {
-
-		if store.App == nil {
-			fmt.Println("Firebase app is not initialized. Please run the sync command first to set up the connection.")
-			return
-		}
 		downloadConfigurations()
 	},
 }

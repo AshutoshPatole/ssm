@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"github.com/AshutoshPatole/ssm/internal/store"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -15,6 +17,11 @@ var syncCmd = &cobra.Command{
 	Long: `The sync command allows you to upload or download your SSH public and private keys,
 as well as the SSM configuration file and other dot files. This ensures that your SSH setup is consistent
 across different machines and provides a backup of your essential SSH-related files.`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if err := store.InitFirebaseOnce(); err != nil {
+			logrus.Fatalln("Failed to initialize Firebase:", err)
+		}
+	},
 }
 
 func init() {
