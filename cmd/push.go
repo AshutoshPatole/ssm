@@ -59,19 +59,31 @@ func upload(documentID string, userPassword string) {
 	ssmYaml, _ := readFileAsBytes(".ssm.yaml")
 	publicKey, _ := readFileAsBytes(".ssh/id_ed25519.pub")
 	privateKey, _ := readFileAsBytes(".ssh/id_ed25519")
+	zshrc, _ := readFileAsBytes(".zshrc")
+	bashrc, _ := readFileAsBytes(".bashrc")
+	tmux, _ := readFileAsBytes(".tmux.conf")
+	sshConfig, _ := readFileAsBytes(".ssh/config")
 
 	key := security.GenerateEncryptionKey(userPassword)
 
 	encryptedSSMYaml := security.EncryptData(ssmYaml, key)
 	encryptedPublicKey := security.EncryptData(publicKey, key)
 	encryptedPrivateKey := security.EncryptData(privateKey, key)
+	encryptedZshrc := security.EncryptData(zshrc, key)
+	encryptedBashrc := security.EncryptData(bashrc, key)
+	encryptedTmux := security.EncryptData(tmux, key)
+	encryptedSSHConfig := security.EncryptData(sshConfig, key)
 
 	configurations := client.Collection("configurations")
 	//configurations.
 	_, err = configurations.Doc(documentID).Set(context.Background(), map[string]interface{}{
-		"ssm_yaml": encryptedSSMYaml,
-		"public":   encryptedPublicKey,
-		"private":  encryptedPrivateKey,
+		"ssm_yaml":   encryptedSSMYaml,
+		"public":     encryptedPublicKey,
+		"private":    encryptedPrivateKey,
+		"zshrc":      encryptedZshrc,
+		"bashrc":     encryptedBashrc,
+		"tmux":       encryptedTmux,
+		"ssh_config": encryptedSSHConfig,
 	})
 	if err != nil {
 		logrus.Fatalf("error adding configuration: %v", err)
@@ -80,6 +92,7 @@ func upload(documentID string, userPassword string) {
 }
 
 func readFileAsBytes(path string) ([]byte, error) {
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatalf("Error getting home directory: %v", err)
@@ -87,6 +100,9 @@ func readFileAsBytes(path string) ([]byte, error) {
 
 	filePath := fmt.Sprintf("%s/%s", homeDir, path)
 
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return []byte{}, nil
+	}
 	fileContent, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file: %v", err)

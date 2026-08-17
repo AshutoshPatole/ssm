@@ -76,6 +76,10 @@ func downloadConfigurations() {
 	yamlEncrypted := document.Data()["ssm_yaml"].(string)
 	publicKeyEncrypted := document.Data()["public"].(string)
 	privateKeyEncrypted := document.Data()["private"].(string)
+	zshrcEncrypted := document.Data()["zshrc"].(string)
+	bashrcEncrypted := document.Data()["bashrc"].(string)
+	sshConfigEncrypted := document.Data()["ssh_config"].(string)
+	tmuxEncrypted := document.Data()["tmux"].(string)
 
 	key := security.GenerateEncryptionKey(userPassword)
 
@@ -94,6 +98,26 @@ func downloadConfigurations() {
 		logrus.Fatal(err)
 	}
 
+	bashrc, err := security.DecryptData(bashrcEncrypted, key)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	zshrc, err := security.DecryptData(zshrcEncrypted, key)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	sshConfig, err := security.DecryptData(sshConfigEncrypted, key)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	tmux, err := security.DecryptData(tmuxEncrypted, key)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
 	// check if .ssh exists at home
 	sshDir := userHomeDir + "/.ssh"
 	_, err = os.Stat(sshDir)
@@ -103,18 +127,37 @@ func downloadConfigurations() {
 			logrus.Fatal(err)
 		}
 	}
+	files := map[string]struct {
+		data        []byte
+		permissions os.FileMode
+	}{
+		".ssm.yaml":           {yaml, 0644},
+		".ssh/id_ed25519.pub": {publicKey, 0644},
+		".ssh/id_ed25519":     {privateKey, 0600},
+		".bashrc":             {bashrc, 0644},
+		".zshrc":              {zshrc, 0644},
+		".ssh/config":         {sshConfig, 0644},
+		".tmux.conf":          {tmux, 0644},
+	}
 
-	saveFile(path.Join(userHomeDir+"/.ssm.yaml"), yaml, 0644)
-	saveFile(path.Join(userHomeDir+"/.ssh/id_ed25519.pub"), publicKey, 0644)
-	saveFile(path.Join(userHomeDir+"/.ssh/id_ed25519"), privateKey, 0600)
+	for filePath, fileInfo := range files {
+		fullPath := path.Join(userHomeDir, filePath)
+		logrus.Infof("Attempting to save file: %s", fullPath)
+		logrus.Debugf("File content length: %d", len(fileInfo.data))
+
+		if err := saveFile(fullPath, fileInfo.data, fileInfo.permissions); err != nil {
+			logrus.Errorf("Failed to save %s: %v", filePath, err)
+		}
+	}
 }
 
-func saveFile(filename string, data []byte, permission uint32) {
-	err := os.WriteFile(filename, data, os.FileMode(permission))
+func saveFile(filename string, data []byte, permission os.FileMode) error {
+	err := os.WriteFile(filename, data, permission)
 	if err != nil {
-		logrus.Errorf("Failed to save file %s: %s", filename, err)
-		return
+		return fmt.Errorf("failed to save file %s: %w", filename, err)
 	}
+	logrus.Infof("Successfully saved file: %s", filename)
+	return nil
 }
 
 func fetchUID(userPassword string) string {
