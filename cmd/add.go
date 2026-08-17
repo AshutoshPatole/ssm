@@ -3,8 +3,11 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 
+	"github.com/AshutoshPatole/ssm-v2/internal/security"
 	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
+	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -17,13 +20,14 @@ var (
 	environment              string
 	setupDotFiles            bool
 	allowedEnvironmentValues = []string{"dev", "staging", "prod"}
+	rdpConnectionString      bool
 )
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add a new SSH server configuration to your profile.",
-	Long: `This command allows you to add a new SSH server configuration to your profile. 
+	Long: `This command allows you to add a new SSH server configuration to your profile.
 
 You can specify the hostname, username, group, environment, and other optional settings such as alias and dotfiles configuration.`,
 	Args: func(cmd *cobra.Command, args []string) error {
@@ -52,7 +56,17 @@ func addServer(host string) {
 		logrus.Fatal(color.InRed("Error reading password"))
 	}
 
-	ssh.InitSSHConnection(username, password, host, group, environment, alias, setupDotFiles)
+	if rdpConnectionString {
+		credentialKey := fmt.Sprintf("%s_%s_%s", group, environment, host)
+		err = security.StoreCredentials(credentialKey, password)
+		if err != nil {
+			logrus.Fatalln(color.InRed("Error storing credential: " + err.Error()))
+		}
+		store.Save(group, environment, host, username, alias, credentialKey, true)
+	} else {
+		store.Save(group, environment, host, username, alias, "", false)
+		ssh.InitSSHConnection(username, password, host, group, environment, alias, setupDotFiles)
+	}
 }
 
 func init() {
@@ -62,6 +76,7 @@ func init() {
 	addCmd.Flags().StringVarP(&alias, "alias", "a", "", "Alias to use")
 	addCmd.Flags().StringVarP(&environment, "environment", "e", "dev", "Environment to use")
 	addCmd.Flags().BoolVarP(&setupDotFiles, "dotfiles", "d", false, "Configure the dotfiles")
+	addCmd.Flags().BoolVarP(&rdpConnectionString, "rdp", "r", false, "Flag to indicate its RDP connection and not try SSH")
 	_ = addCmd.MarkFlagRequired("group")
 	_ = addCmd.MarkFlagRequired("alias")
 }
