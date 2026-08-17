@@ -14,6 +14,7 @@ var (
 	group                    string
 	alias                    string
 	environment              string
+	setupDotFiles            bool
 	allowedEnvironmentValues = []string{"dev", "staging", "prod"}
 )
 
@@ -47,7 +48,8 @@ func addServer(host string) {
 	if err != nil {
 		log.Fatal(color.InRed("Error reading password"))
 	}
-	ssh.InitSSHConnection(username, password, host, group, environment, alias)
+
+	ssh.InitSSHConnection(username, password, host, group, environment, alias, setupDotFiles)
 }
 
 func init() {
@@ -56,6 +58,8 @@ func init() {
 	addCmd.Flags().StringVarP(&group, "group", "g", "", "Group to use")
 	addCmd.Flags().StringVarP(&alias, "alias", "a", "", "Alias to use")
 	addCmd.Flags().StringVarP(&environment, "environment", "e", "dev", "Environment to use")
+	addCmd.Flags().BoolVarP(&setupDotFiles, "dotfiles", "d", false, "Configure the dotfiles")
 	_ = addCmd.MarkFlagRequired("group")
 	_ = addCmd.MarkFlagRequired("alias")
+	_ = addCmd.MarkFlagRequired("dotfiles")
 }

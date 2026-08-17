@@ -4,10 +4,23 @@ import (
 	"fmt"
 	"github.com/TwiN/go-color"
 	"golang.org/x/crypto/ssh"
+	"log"
 	"os"
 )
 
-func AddPublicKeys(session *ssh.Session) bool {
+func AddPublicKeys(client *ssh.Client) bool {
+
+	session, err := client.NewSession()
+	if err != nil {
+		log.Fatal(color.InRed(err.Error()))
+	}
+	defer func(session *ssh.Session) {
+		_ = session.Close()
+	}(session)
+
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stderr
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Println(err)
@@ -27,7 +40,7 @@ func AddPublicKeys(session *ssh.Session) bool {
 		fmt.Println(color.InRed("Could not add public key " + publicKeyPath))
 		return false
 	}
-	fmt.Println(color.InGreen("Successfully added public key " + publicKeyPath))
+	//fmt.Println(color.InGreen("Successfully added public key " + publicKeyPath))
 	defer func(session *ssh.Session) {
 		_ = session.Close()
 	}(session)
