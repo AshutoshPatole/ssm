@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/AshutoshPatole/ssm/internal/configuration"
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
@@ -22,7 +21,7 @@ func InitSSHConnection(user, password, host, group, environment, alias string, s
 		handleSuccessfulConnection(client, user, setupDotFiles)
 		return
 	} else {
-		logrus.Debugf("Standard SSH connection failed: %v, trying alternative method", err)
+		logrus.Debug("Standard SSH connection failed:", err, "trying alternative method")
 	}
 
 	if client, err := trySSHWithCustomDialer(user, password, host); err == nil {
@@ -30,7 +29,7 @@ func InitSSHConnection(user, password, host, group, environment, alias string, s
 		handleSuccessfulConnection(client, user, setupDotFiles)
 		return
 	} else {
-		logrus.Fatal(color.InRed("All connection attempts failed"))
+		logrus.Fatal("All connection attempts failed:", err)
 	}
 }
 
@@ -89,7 +88,7 @@ func handleSuccessfulConnection(client *ssh.Client, user string, setupDotFiles b
 	defer func(client *ssh.Client) {
 		err := client.Close()
 		if err != nil {
-			logrus.Fatalf(color.InRed("Failed to close SSH connection"))
+			logrus.Fatal("Failed to close SSH connection:", err)
 		}
 	}(client)
 

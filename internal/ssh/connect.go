@@ -21,7 +21,7 @@ func Connect(user, server string) {
 
 	_, err := os.Stat(privateKey)
 	if os.IsNotExist(err) {
-		logrus.Fatal(color.InRed("ED25519 private key does not exists on the local system"))
+		logrus.Fatal("ED25519 private key does not exist on the local system")
 	}
 	var sshCmd *exec.Cmd
 	switch runtime.GOOS {
@@ -32,7 +32,7 @@ func Connect(user, server string) {
 	case "windows":
 		sshCmd = exec.Command("ssh", user+"@"+server)
 	default:
-		logrus.Error(color.InRed("Unsupported operating system"))
+		logrus.Error("Unsupported operating system")
 		return
 	}
 
@@ -53,7 +53,7 @@ func Connect(user, server string) {
 			logrus.Fatal("Failed to wait for SSH command:", err)
 		}
 		waitStatus := exitErr.Sys().(syscall.WaitStatus)
-		logrus.Println("SSH session exited with:", waitStatus.ExitStatus())
+		logrus.Info("SSH session exited with:", waitStatus.ExitStatus())
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/AshutoshPatole/ssm/internal/store"
-	"github.com/TwiN/go-color"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -57,23 +56,23 @@ groups:
 
 	err := yaml.Unmarshal([]byte(content), &data)
 	if err != nil {
-		logrus.Fatal("something went wrong in unmarshalling", err.Error())
+		logrus.Fatal("Failed to unmarshal template:", err)
 	}
 
 	d, err := yaml.Marshal(data)
 	if err != nil {
-		logrus.Fatal("something went wrong in marshalling", err.Error())
+		logrus.Fatal("Failed to marshal configuration:", err)
 	}
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		logrus.Fatal("something went wrong in getting home dir", err.Error())
+		logrus.Fatal("Failed to get home directory:", err)
 	}
 
 	wErr := os.WriteFile(homeDir+"/.ssm-template.yaml", d, 0644)
 	if wErr != nil {
-		logrus.Fatal("something went wrong in writing file", wErr.Error())
+		logrus.Fatal("Failed to write template file:", wErr)
 	}
 
-	logrus.Print(color.InGreen("File saved at " + homeDir + "/.ssm-template.yaml"))
+	logrus.Info("File saved at", homeDir+"/.ssm-template.yaml")
 }

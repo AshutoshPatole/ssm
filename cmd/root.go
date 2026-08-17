@@ -3,12 +3,10 @@ package cmd
 
 import (
 	"embed"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/TwiN/go-color"
 	goversion "github.com/caarlos0/go-version"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -56,7 +54,7 @@ func Execute() {
 	}
 	isUpdateAvailable, _, latestVersion := CheckForUpdates()
 	if isUpdateAvailable {
-		fmt.Println(color.InGreen("New Update Available"), color.InBold(color.InGreen(latestVersion)))
+		logrus.Info("New update available: ", latestVersion)
 		return
 	}
 }
@@ -73,20 +71,19 @@ func init() {
 	// to handle .env files and the firebase config file
 	data, err := envFile.ReadFile(".env.production")
 	if err != nil {
-		logrus.Errorf("error reading embedded env file: %v", err)
+		logrus.Error("Error reading embedded env file:", err)
 	}
 
-	// Write the embedded data to a temporary file and load it with dotenv
 	tempFile, err := os.CreateTemp("", ".env")
 	if err != nil {
-		logrus.Errorf("error creating temporary file: %v", err)
+		logrus.Error("Error creating temporary file:", err)
 	}
 	defer func(tempFile *os.File) {
 		_ = tempFile.Close()
 	}(tempFile)
 
 	if _, err := tempFile.Write(data); err != nil {
-		logrus.Errorf("error writing to temporary file: %v", err)
+		logrus.Error("Error writing to temporary file:", err)
 	}
 
 	err = godotenv.Load(tempFile.Name())
@@ -164,20 +161,20 @@ func buildVersion(version, commit, date, builtBy, treeState string) goversion.In
 func setupFileLogging() {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		logrus.Errorf("Failed to get home directory: %v", err)
+		logrus.Error("Failed to get home directory:", err)
 		return
 	}
 
 	logDir := filepath.Join(homeDir, ".ssm")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
-		logrus.Errorf("Failed to create log directory: %v", err)
+		logrus.Error("Failed to create log directory:", err)
 		return
 	}
 
 	logFile := filepath.Join(logDir, "ssm_debug.log")
 	debugFile, err = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		logrus.Errorf("Failed to open log file: %v", err)
+		logrus.Error("Failed to open log file:", err)
 		return
 	}
 
