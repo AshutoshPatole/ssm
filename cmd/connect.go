@@ -55,6 +55,7 @@ ssm connect group-name -e ppd
 		if isRDP {
 			logrus.Debug("Connecting to RDP server")
 			ConnectToServerRDP(user, host, credentialKey)
+			return
 		}
 		logrus.Debug("Connecting to SSH server")
 		ConnectToServer(user, host)
@@ -72,7 +73,7 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 	var config store.Config
 
 	if err := viper.Unmarshal(&config); err != nil {
-		logrus.Fatalf("Failed to unmarshal configuration: %v", err)
+		return "", "", "", false, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
 	selectedEnvName := ""
@@ -120,6 +121,11 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 			}
 		}
 	}
+
+	if len(serverOptions) == 0 {
+		return "", "", "", false, fmt.Errorf("no servers found in group '%s' (filter: '%s')", group, environment)
+	}
+
 	labels := make([]string, len(serverOptions))
 	for i, serverOption := range serverOptions {
 		labels[i] = serverOption.Label

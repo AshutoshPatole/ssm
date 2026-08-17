@@ -215,20 +215,22 @@ func (m deleteModel) View() string {
 // Logic to delete servers
 
 func deleteSelectedServers(m deleteModel) tea.Cmd {
-	// Perform deletion synchronously before quitting
-	ipsToDelete := make(map[string]struct{})
+	keysToDelete := make(map[string]struct{})
 	for idx := range m.selected {
-		ipsToDelete[m.items[idx].IP] = struct{}{}
+		item := m.items[idx]
+		itemKey := fmt.Sprintf("%s|%s|%s|%s", item.Group, item.Env, item.Name, item.IP)
+		keysToDelete[itemKey] = struct{}{}
 	}
 
-	newGroups := []store.Group{}
+	var newGroups []store.Group
 
 	for _, grp := range m.config.Groups {
-		newEnv := []store.Env{}
+		var newEnv []store.Env
 		for _, env := range grp.Environment {
-			newServers := []store.Server{}
+			var newServers []store.Server
 			for _, srv := range env.Servers {
-				if _, deleteIt := ipsToDelete[srv.IP]; !deleteIt {
+				itemKey := fmt.Sprintf("%s|%s|%s|%s", grp.Name, env.Name, srv.HostName, srv.IP)
+				if _, deleteIt := keysToDelete[itemKey]; !deleteIt {
 					newServers = append(newServers, srv)
 				}
 			}
@@ -250,7 +252,6 @@ func deleteSelectedServers(m deleteModel) tea.Cmd {
 		logrus.Error("Failed to write config:", err)
 	}
 
-	// Return the Quit command directly
 	return tea.Quit
 }
 
@@ -270,23 +271,28 @@ func runInteractiveDelete() {
 // Legacy / CLI Flag Mode
 
 func deleteServerNonInteractive() {
-	ipToDelete := resolveIP(serverToDelete)
-	if ipToDelete == "" {
-		fmt.Printf("Error: Unable to resolve '%s' to an IP address\n", serverToDelete)
+	target := strings.TrimSpace(serverToDelete)
+	if target == "" {
+		fmt.Println("Error: Please provide a server alias, hostname, or IP address to delete")
 		return
 	}
+	resolvedIP := resolveIP(target)
 
 	var config store.Config
 	if err := viper.Unmarshal(&config); err != nil {
 		fmt.Printf("Error: Failed to load configuration: %v\n", err)
 		return
 	}
+
 	serverFound := false
-	for gi, grp := range config.Groups {
-		for ei, env := range grp.Environment {
-			for si, srv := range env.Servers {
-				if srv.IP == ipToDelete {
-					fmt.Printf("Server '%s' with IP '%s' found in environment '%s' of group '%s'\n", serverToDelete, srv.IP, env.Name, grp.Name)
+	for gi := range config.Groups {
+		for ei := range config.Groups[gi].Environment {
+			env := &config.Groups[gi].Environment[ei]
+			for si := 0; si < len(env.Servers); si++ {
+				srv := env.Servers[si]
+				matches := srv.Alias == target || srv.HostName == target || srv.IP == target || (resolvedIP != "" && srv.IP == resolvedIP)
+				if matches {
+					fmt.Printf("Server '%s' (%s, IP: %s) found in environment '%s' of group '%s'\n", srv.Alias, srv.HostName, srv.IP, env.Name, config.Groups[gi].Name)
 					reader := bufio.NewReader(os.Stdin)
 					fmt.Print("Are you sure you want to delete this server? (y/n): ")
 					response, err := reader.ReadString('\n')
@@ -295,21 +301,21 @@ func deleteServerNonInteractive() {
 						return
 					}
 					serverFound = true
-					response = strings.TrimSpace(response)
+					response = strings.TrimSpace(strings.ToLower(response))
 					if response == "y" || response == "yes" {
-						config.Groups[gi].Environment[ei].Servers = append(env.Servers[:si], env.Servers[si+1:]...)
+						env.Servers = append(env.Servers[:si], env.Servers[si+1:]...)
 						fmt.Println("Server deleted successfully!")
+						si-- // Adjust index after deletion
 					} else {
 						fmt.Println("Server deletion aborted.")
 					}
-					break
 				}
 			}
 		}
 	}
 
 	if !serverFound {
-		fmt.Printf("Server '%s' with IP '%s' was not found in the configuration\n", serverToDelete, ipToDelete)
+		fmt.Printf("Server matching '%s' was not found in the configuration\n", serverToDelete)
 		return
 	}
 
@@ -354,3 +360,4 @@ func resolveIP(input string) string {
 	}
 	return ips[0].String()
 }
+

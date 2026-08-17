@@ -49,11 +49,14 @@ It simplifies the management of SSH profiles with commands to register users, im
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
+	if debugFile != nil {
+		_ = debugFile.Close()
+	}
 	if err != nil {
 		os.Exit(1)
 	}
-	isUpdateAvailable, _, latestVersion := CheckForUpdates()
-	if isUpdateAvailable {
+	isUpdateAvailable, _, latestVersion, err := CheckForUpdates()
+	if err == nil && isUpdateAvailable {
 		logrus.Info("New update available: ", latestVersion)
 		return
 	}
@@ -67,30 +70,21 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ssm.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "toggle debug logs")
 	rootCmd.PersistentFlags().BoolVar(&showVersion, "version", false, "Show version")
-	// Note: Not sure if this is right method, but I am finding it difficult
-	// to handle .env files and the firebase config file
+
+	// Parse embedded env directly into process environment without writing to disk
 	data, err := envFile.ReadFile(".env.production")
 	if err != nil {
-		logrus.Error("Error reading embedded env file:", err)
+		logrus.Debug("No embedded .env.production file found:", err)
+	} else {
+		envMap, err := godotenv.Unmarshal(string(data))
+		if err == nil {
+			for k, v := range envMap {
+				if os.Getenv(k) == "" {
+					_ = os.Setenv(k, v)
+				}
+			}
+		}
 	}
-
-	tempFile, err := os.CreateTemp("", ".env")
-	if err != nil {
-		logrus.Error("Error creating temporary file:", err)
-	}
-	defer func(tempFile *os.File) {
-		_ = tempFile.Close()
-	}(tempFile)
-
-	if _, err := tempFile.Write(data); err != nil {
-		logrus.Error("Error writing to temporary file:", err)
-	}
-
-	err = godotenv.Load(tempFile.Name())
-	if err != nil {
-		return
-	}
-
 }
 
 // initConfig reads in config file and ENV variables if set.

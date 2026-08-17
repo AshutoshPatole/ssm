@@ -4,7 +4,6 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,24 +46,32 @@ var reverseCopyCmd = &cobra.Command{
 		}
 
 		logrus.Debug("Establishing SSH connection for ", user, "@", host)
-		client, _ := ssh2.NewSSHClient(user, host)
+		client, err := ssh2.NewSSHClient(user, host)
+		if err != nil {
+			logrus.Errorf("SSH connection failed: %v", err)
+			return
+		}
+		defer client.Close()
 
 		files, err := ListFiles(client, ".", false)
 		if err != nil {
-			log.Fatalf("Failed to retrieve file list: %v", err)
+			logrus.Errorf("Failed to retrieve file list: %v", err)
+			return
 		}
 
 		logrus.Debug("Launching interactive file selection interface")
 		p := tea.NewProgram(initialModel(client, files))
 
 		if _, err := p.Run(); err != nil {
-			log.Fatalf("Error running interactive interface: %v", err)
+			logrus.Errorf("Error running interactive interface: %v", err)
 		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(reverseCopyCmd)
+	reverseCopyCmd.Flags().StringVarP(&filterByEnvironment, "filter", "f", "", "Filter server list by environment")
+	reverseCopyCmd.Flags().StringVarP(&filterByEnvironment, "environment", "e", "", "Filter server list by environment")
 }
 
 // FileInfo represents information about a file or directory on the remote server
@@ -101,11 +108,16 @@ func ListFiles(client *ssh.Client, remoteDir string, showHidden bool) ([]FileInf
 			continue
 		}
 		parts := strings.SplitN(line, " ", 2)
-		isDir := parts[0][0] == 'd'
+		if len(parts) < 2 {
+			continue
+		}
+		isDir := len(parts[0]) > 0 && parts[0][0] == 'd'
 		if !showHidden && strings.HasPrefix(parts[1], ".") {
 			continue
 		}
-		files = append(files, FileInfo{Name: parts[1], IsDir: isDir, Path: filepath.Join(remoteDir, parts[1])})
+		// Remote paths should use POSIX path formatting
+		remotePath := strings.TrimRight(remoteDir, "/") + "/" + parts[1]
+		files = append(files, FileInfo{Name: parts[1], IsDir: isDir, Path: remotePath})
 	}
 
 	logrus.Debugf("Retrieved %d files/directories", len(files))
@@ -137,7 +149,7 @@ func downloadSingleFile(client *ssh.Client, remoteFile, localFile string) error 
 		return fmt.Errorf("failed to establish stdout pipe: %w", err)
 	}
 
-	if err := session.Start(fmt.Sprintf("cat %s", remoteFile)); err != nil {
+	if err := session.Start(fmt.Sprintf("cat %q", remoteFile)); err != nil {
 		return fmt.Errorf("failed to initiate remote file reading: %w", err)
 	}
 
@@ -407,7 +419,7 @@ func (m model) selectedFiles() []FileInfo {
 func downloadFiles(client *ssh.Client, files []FileInfo) tea.Cmd {
 	return func() tea.Msg {
 		for _, file := range files {
-			localFile := "./" + strings.TrimPrefix(file.Name, ".")
+			localFile := "./" + file.Name
 			if file.IsDir {
 				localFile += ".tar.gz"
 			}

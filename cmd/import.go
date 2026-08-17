@@ -41,30 +41,52 @@ func init() {
 func readFile() {
 	yamlFile, err := os.ReadFile(filePath)
 	if err != nil {
-		logrus.Fatalln(err)
+		logrus.Errorf("Error reading file %s: %v", filePath, err)
+		return
 	}
 	var config store.Config
 	err = yaml.Unmarshal(yamlFile, &config)
 	if err != nil {
-		logrus.Fatalln(err)
+		logrus.Errorf("Error parsing YAML config: %v", err)
+		return
 	}
 
 	if !allGroup && groupName == "" {
-		logrus.Fatal("Please specify a group name with --group or use --all to import all groups")
+		logrus.Error("Please specify a group name with --group or use --all to import all groups")
+		return
 	}
 
+	var groupsToImport []store.Group
 	if allGroup {
-		for _, group := range config.Groups {
-			fmt.Println("Importing group : ", group.Name)
-			if err != nil {
-				logrus.Fatalln(err)
-				return
+		groupsToImport = config.Groups
+	} else {
+		found := false
+		for _, g := range config.Groups {
+			if g.Name == groupName {
+				groupsToImport = append(groupsToImport, g)
+				found = true
+				break
 			}
-			for _, environment := range group.Environment {
-				for _, host := range environment.Servers {
-					newPassword, _ := ssh.AskPassword()
-					ssh.InitSSHConnection(host.User, newPassword, host.HostName, group.Name, environment.Name, host.Alias, setupDotFile)
+		}
+		if !found {
+			logrus.Errorf("Group '%s' not found in %s", groupName, filePath)
+			return
+		}
+	}
 
+	for _, group := range groupsToImport {
+		fmt.Println("Importing group:", group.Name)
+		for _, environment := range group.Environment {
+			for _, host := range environment.Servers {
+				fmt.Printf("Enter password for server %s (%s@%s):\n", host.Alias, host.User, host.HostName)
+				newPassword, err := ssh.AskPassword()
+				if err != nil {
+					logrus.Errorf("Skipping server %s: %v", host.HostName, err)
+					continue
+				}
+				store.Save(group.Name, environment.Name, host.HostName, host.User, host.Alias, "", host.IsRDP)
+				if !host.IsRDP {
+					ssh.InitSSHConnection(host.User, newPassword, host.HostName, group.Name, environment.Name, host.Alias, setupDotFile)
 				}
 			}
 		}

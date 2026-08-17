@@ -13,11 +13,16 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+var updateHttpClient = &http.Client{
+	Timeout: 15 * time.Second,
+}
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
@@ -25,7 +30,11 @@ var updateCmd = &cobra.Command{
 	Short: "Check and install the latest version of the application",
 	Long:  `This command checks for the latest version of the application from the GitHub repository and provides an option to download and install it if an update is available.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		updateAvailable, latestRelease, latestVersion := CheckForUpdates()
+		updateAvailable, latestRelease, latestVersion, err := CheckForUpdates()
+		if err != nil {
+			logrus.Errorf("Update check failed: %v", err)
+			return
+		}
 		if updateAvailable {
 			startUpgrade(latestRelease, latestVersion)
 		} else {
@@ -40,29 +49,28 @@ func init() {
 
 // CheckForUpdates compares the current version with the latest release on GitHub
 // and returns whether an update is available along with release information
-func CheckForUpdates() (bool, *GitHubRelease, *semver.Version) {
+func CheckForUpdates() (bool, *GitHubRelease, *semver.Version, error) {
 	currentVersion, err := semver.NewVersion(version)
 	if err != nil {
-		logrus.Fatal("Error parsing current version:", err)
+		return false, nil, nil, fmt.Errorf("error parsing current version: %w", err)
 	}
 
 	latestRelease, err := getLatestRelease()
 	if err != nil {
-		logrus.Fatal("Error fetching latest release:", err)
+		return false, nil, nil, fmt.Errorf("error fetching latest release: %w", err)
 	}
 
 	latestVersion, err := semver.NewVersion(latestRelease.TagName)
 	if err != nil {
-		logrus.Fatal("Error parsing latest version:", err)
+		return false, nil, nil, fmt.Errorf("error parsing latest version: %w", err)
 	}
 
-	return latestVersion.GreaterThan(currentVersion), latestRelease, latestVersion
+	return latestVersion.GreaterThan(currentVersion), latestRelease, latestVersion, nil
 }
 
 // startUpgrade initiates the upgrade process by displaying version information
 // and prompting the user to confirm the download
 func startUpgrade(latestRelease *GitHubRelease, latestVersion *semver.Version) {
-
 	fmt.Println(asciiArt)
 	fmt.Printf("Current version: %s\n", version)
 	fmt.Printf("New version available: %s\n", latestVersion)
@@ -93,13 +101,15 @@ var (
 // getLatestRelease fetches the latest release information from GitHub
 func getLatestRelease() (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
-	resp, err := http.Get(url)
+	resp, err := updateHttpClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+	}
 
 	var release GitHubRelease
 	err = json.NewDecoder(resp.Body).Decode(&release)
@@ -122,7 +132,7 @@ func downloadUpdate(release *GitHubRelease) {
 	}
 
 	if downloadURL == "" {
-		logrus.Fatal("No matching asset found for your system")
+		logrus.Error("No matching asset found for your system")
 		return
 	}
 
@@ -188,7 +198,7 @@ func upgrade(downloadURL string, assetName string) {
 		os.Exit(0)
 	}
 
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
 		binaryPath, err := extractAndGetBinary(archivePath, tempDir)
 		if err != nil {
 			logrus.Fatalf("Error extracting update: %s", err)
@@ -200,12 +210,11 @@ func upgrade(downloadURL string, assetName string) {
 		fmt.Println("Update successfully installed to /usr/local/bin")
 		os.Exit(0)
 	}
-
 }
 
 // downloadFile downloads a file from the given URL and saves it to the specified filepath
 func downloadFile(url, filepath string) error {
-	resp, err := http.Get(url)
+	resp, err := updateHttpClient.Get(url)
 	if err != nil {
 		return err
 	}
@@ -247,6 +256,7 @@ func extractTarGz(archivePath, destDir string) (string, error) {
 
 	tr := tar.NewReader(gzr)
 
+	cleanDest := filepath.Clean(destDir) + string(filepath.Separator)
 	var binaryPath string
 	for {
 		header, err := tr.Next()
@@ -257,12 +267,23 @@ func extractTarGz(archivePath, destDir string) (string, error) {
 			return "", err
 		}
 
-		path := filepath.Join(destDir, header.Name)
+		if filepath.IsAbs(header.Name) || strings.HasPrefix(header.Name, "/") || strings.HasPrefix(header.Name, "\\") {
+			return "", fmt.Errorf("illegal absolute file path in archive: %s", header.Name)
+		}
+
+		path := filepath.Clean(filepath.Join(destDir, header.Name))
+		if !strings.HasPrefix(path, cleanDest) && path != filepath.Clean(destDir) {
+			return "", fmt.Errorf("illegal file path in archive (path traversal attempt): %s", header.Name)
+		}
+
 		if header.Typeflag == tar.TypeDir {
 			if err := os.MkdirAll(path, 0755); err != nil {
 				return "", err
 			}
 		} else if header.Typeflag == tar.TypeReg {
+			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+				return "", err
+			}
 			outFile, err := os.Create(path)
 			if err != nil {
 				return "", err
@@ -273,7 +294,7 @@ func extractTarGz(archivePath, destDir string) (string, error) {
 			}
 			outFile.Close()
 
-			if strings.HasPrefix(header.Name, "ssm") {
+			if strings.HasPrefix(filepath.Base(header.Name), "ssm") {
 				binaryPath = path
 			}
 		}
@@ -294,9 +315,17 @@ func extractZip(archivePath, destDir string) (string, error) {
 	}
 	defer r.Close()
 
+	cleanDest := filepath.Clean(destDir) + string(filepath.Separator)
 	var binaryPath string
 	for _, f := range r.File {
-		path := filepath.Join(destDir, f.Name)
+		if filepath.IsAbs(f.Name) || strings.HasPrefix(f.Name, "/") || strings.HasPrefix(f.Name, "\\") {
+			return "", fmt.Errorf("illegal absolute file path in archive: %s", f.Name)
+		}
+
+		path := filepath.Clean(filepath.Join(destDir, f.Name))
+		if !strings.HasPrefix(path, cleanDest) && path != filepath.Clean(destDir) {
+			return "", fmt.Errorf("illegal file path in archive (path traversal attempt): %s", f.Name)
+		}
 
 		if f.FileInfo().IsDir() {
 			os.MkdirAll(path, 0755)
@@ -326,7 +355,7 @@ func extractZip(archivePath, destDir string) (string, error) {
 			return "", err
 		}
 
-		if strings.HasPrefix(f.Name, "ssm") {
+		if strings.HasPrefix(filepath.Base(f.Name), "ssm") {
 			binaryPath = path
 		}
 	}
@@ -338,7 +367,7 @@ func extractZip(archivePath, destDir string) (string, error) {
 	return binaryPath, nil
 }
 
-// installBinary installs the binary to /usr/local/bin on Linux systems
+// installBinary installs the binary to /usr/local/bin on Linux/macOS systems
 func installBinary(binaryPath string) error {
 	commands := []string{"sudo rm -f /usr/local/bin/ssm", fmt.Sprintf("sudo mv %s /usr/local/bin/ssm", binaryPath), "sudo chmod +x /usr/local/bin/ssm"}
 	for _, cmdStr := range commands {
@@ -397,3 +426,4 @@ func handleWindowsUpdate(archivePath string) error {
 
 	return nil
 }
+
