@@ -187,7 +187,16 @@ func setupLogFile() (*os.File, error) {
 		}
 		logFilePath = filepath.Join(programData, "SSM", "ssm.log")
 	} else {
-		logFilePath = "/var/log/ssm.log"
+		// Use XDG Base Directory Specification for Linux
+		xdgDataHome := os.Getenv("XDG_DATA_HOME")
+		if xdgDataHome == "" {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get user home directory: %v", err)
+			}
+			xdgDataHome = filepath.Join(homeDir, ".local", "share")
+		}
+		logFilePath = filepath.Join(xdgDataHome, "ssm", "logs", "ssm.log")
 	}
 
 	// Ensure the directory exists
