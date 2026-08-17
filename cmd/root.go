@@ -4,6 +4,7 @@ package cmd
 import (
 	"embed"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -25,6 +26,7 @@ var (
 	treeState = ""
 	date      = ""
 	builtBy   = ""
+	debugFile *os.File
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -34,6 +36,7 @@ var rootCmd = &cobra.Command{
 	Long: `SSM (Simple SSH Manager) is a versatile command-line tool for managing SSH connections and user authentication.
 It simplifies the management of SSH profiles with commands to register users, import configurations, connect to remote servers, and synchronize settings across devices`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		setupFileLogging()
 		if verbose {
 			logrus.SetLevel(logrus.DebugLevel)
 			logrus.Debugln("Debug level enabled")
@@ -154,4 +157,27 @@ func buildVersion(version, commit, date, builtBy, treeState string) goversion.In
 			}
 		},
 	)
+}
+
+func setupFileLogging() {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logrus.Errorf("Failed to get home directory: %v", err)
+		return
+	}
+
+	logDir := filepath.Join(homeDir, ".ssm")
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		logrus.Errorf("Failed to create log directory: %v", err)
+		return
+	}
+
+	logFile := filepath.Join(logDir, "ssm_debug.log")
+	debugFile, err = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		logrus.Errorf("Failed to open log file: %v", err)
+		return
+	}
+
+	logrus.SetOutput(io.MultiWriter(os.Stdout, debugFile))
 }

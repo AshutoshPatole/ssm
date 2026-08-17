@@ -3,7 +3,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/AshutoshPatole/ssm/internal/ssh"
 	"github.com/AshutoshPatole/ssm/internal/store"
 	"github.com/TwiN/go-color"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -47,13 +47,16 @@ ssm connect group-name -e ppd
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		logrus.Debugf("Executing connect command with args: %v", args)
 		user, host, credentialKey, isRDP, err := ListToConnectServers(args[0], filterEnvironment)
 		if err != nil {
-			log.Fatal(err)
+			logrus.Fatalf("Error listing servers: %v", err)
 		}
 		if isRDP {
+			logrus.Debug("Connecting to RDP server")
 			ConnectToServerRDP(user, host, credentialKey)
 		}
+		logrus.Debug("Connecting to SSH server")
 		ConnectToServer(user, host)
 	},
 }
@@ -61,13 +64,15 @@ ssm connect group-name -e ppd
 func init() {
 	rootCmd.AddCommand(connectCmd)
 	connectCmd.Flags().StringVarP(&filterEnvironment, "filter", "f", "", "filter list by environment")
+	logrus.Debug("Connect command initialized")
 }
 
 func ListToConnectServers(group, environment string) (string, string, string, bool, error) {
+	logrus.Debugf("Listing servers for group: %s, environment: %s", group, environment)
 	var config store.Config
 
 	if err := viper.Unmarshal(&config); err != nil {
-		log.Fatalln(err)
+		logrus.Fatalf("Failed to unmarshal config: %v", err)
 	}
 
 	selectedEnvName := ""
@@ -119,6 +124,8 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 		labels[i] = serverOption.Label
 	}
 
+	logrus.Debugf("Found %d server options", len(serverOptions))
+
 	fmt.Println(color.InGreen(selectedEnvName))
 	prompt := &survey.Select{
 		Message: "Select server",
@@ -126,6 +133,7 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 	}
 	err := survey.AskOne(prompt, &selectedHostName)
 	if err != nil {
+		logrus.Errorf("Failed to select server: %v", err)
 		return "", "", "", false, err
 	}
 
@@ -154,13 +162,16 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 		}
 		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "RDP", colonWidth, rdpStatus)))
 		//ssh.Connect(user, selectedHostIP)
+		logrus.Debugf("Selected server: %s (%s)", selectedHostName, selectedHostIP)
 		return user, selectedHostIP, credentialKey, isRDP, nil
 	} else {
 		fmt.Println(color.InRed("Aborted! Bad Request"))
-		return "", "", "", false, err
+		logrus.Error("Failed to select a valid server")
+		return "", "", "", false, fmt.Errorf("invalid server selection")
 	}
 }
 
 func ConnectToServer(user, host string) {
+	logrus.Debugf("Connecting to server: %s@%s", user, host)
 	ssh.Connect(user, host)
 }
