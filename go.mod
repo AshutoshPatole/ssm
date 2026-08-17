@@ -3,11 +3,14 @@ module ssm-v2
 go 1.22
 
 require (
+	cloud.google.com/go/firestore v1.16.0
 	firebase.google.com/go v3.13.0+incompatible
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/TwiN/go-color v1.4.1
 	github.com/charmbracelet/bubbletea v0.26.6
 	github.com/charmbracelet/lipgloss v0.12.1
+	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/joho/godotenv v1.5.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
@@ -21,7 +24,6 @@ require (
 	cloud.google.com/go/auth v0.7.3 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
 	cloud.google.com/go/compute/metadata v0.5.0 // indirect
-	cloud.google.com/go/firestore v1.16.0 // indirect
 	cloud.google.com/go/iam v1.1.12 // indirect
 	cloud.google.com/go/longrunning v0.5.11 // indirect
 	cloud.google.com/go/storage v1.41.0 // indirect
@@ -35,7 +37,6 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
@@ -44,7 +45,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
