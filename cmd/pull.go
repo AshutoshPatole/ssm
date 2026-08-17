@@ -69,6 +69,17 @@ func downloadConfigurations() {
 	yaml := document.Data()["ssm_yaml"].([]byte)
 	publicKey := document.Data()["public"].([]byte)
 	privateKey := document.Data()["private"].([]byte)
+
+	// check if .ssh exists at home
+	sshDir := userHomeDir + "/.ssh"
+	_, err = os.Stat(sshDir)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(sshDir, 0755)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+	}
+
 	saveFile(path.Join(userHomeDir+"/.ssm.yaml"), yaml, 0644)
 	saveFile(path.Join(userHomeDir+"/.ssh/id_ed25519.pub"), publicKey, 0644)
 	saveFile(path.Join(userHomeDir+"/.ssh/id_ed25519"), privateKey, 0600)
