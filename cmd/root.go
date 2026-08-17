@@ -3,7 +3,7 @@ package cmd
 
 import (
 	"embed"
-	"fmt"
+	goversion "github.com/caarlos0/go-version"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -40,9 +40,7 @@ It simplifies the management of SSH profiles with commands to register users, im
 			logrus.SetLevel(logrus.InfoLevel)
 		}
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		buildVersion(version, commit, date, builtBy, treeState)
-	},
+	Version: buildVersion(version, commit, date, builtBy, treeState).String(),
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -128,12 +126,37 @@ func initConfig() {
 //go:embed art.txt
 var asciiArt string
 
-func buildVersion(version, commit, date, builtBy, treeState string) {
+//func buildVersion(version, commit, date, builtBy, treeState string) {
+//
+//	fmt.Println(asciiArt)
+//	fmt.Printf("Version: %s\n", version)
+//	fmt.Printf("Commit: %s\n", commit)
+//	fmt.Printf("Built by: %s\n", builtBy)
+//	fmt.Printf("TreeState: %s\n", treeState)
+//	fmt.Printf("Build Date: %s\n", date)
+//
+//}
 
-	fmt.Println(asciiArt)
-	fmt.Printf("Version: %s\n", version)
-	fmt.Printf("Commit: %s\n", commit)
-	fmt.Printf("Built by: %s\n", builtBy)
-	fmt.Printf("TreeState: %s\n", treeState)
-	fmt.Printf("Build Date: %s\n", date)
+func buildVersion(version, commit, date, builtBy, treeState string) goversion.Info {
+	return goversion.GetVersionInfo(
+		goversion.WithAppDetails("ssm", "Simple SSH Manager", "https://github.com/AshutoshPatole/ssm-v2"),
+		goversion.WithASCIIName(asciiArt),
+		func(i *goversion.Info) {
+			if commit != "" {
+				i.GitCommit = commit
+			}
+			if treeState != "" {
+				i.GitTreeState = treeState
+			}
+			if date != "" {
+				i.BuildDate = date
+			}
+			if version != "" {
+				i.GitVersion = version
+			}
+			if builtBy != "" {
+				i.BuiltBy = builtBy
+			}
+		},
+	)
 }
