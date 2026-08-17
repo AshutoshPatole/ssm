@@ -2,14 +2,14 @@ package configuration
 
 import (
 	"fmt"
-	"log"
+	"github.com/sirupsen/logrus"
 	"path/filepath"
 
 	"github.com/TwiN/go-color"
 	"golang.org/x/crypto/ssh"
 )
 
-func SetupConfiguration(client *ssh.Client, user string) {
+func Setup(client *ssh.Client, user string) {
 	remoteHomeDir := fmt.Sprintf("/home/%s", user)
 	if user == "root" {
 		remoteHomeDir = "/root"
@@ -36,16 +36,15 @@ func runInstallScript(client *ssh.Client, remoteHomeDir string) {
 func runCommand(client *ssh.Client, command string) {
 	session, err := client.NewSession()
 	if err != nil {
-		log.Fatalf("Failed to create session: %v", err)
+		logrus.Fatalf("Failed to create session: %v", err)
 	}
 	defer func(session *ssh.Session) {
 		_ = session.Close()
 	}(session)
 
-	fmt.Println(color.InGreen("Running command:"), command)
+	logrus.Debug(color.InGreen("Running command: "), command)
 	err = session.Run(command)
 	if err != nil {
-		log.Fatalf("Failed to run command %s: %v", command, err)
+		logrus.Fatalf("Failed to run command %s: %v", command, err)
 	}
-	fmt.Println(color.InGreen("Command executed successfully!"))
 }

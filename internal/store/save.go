@@ -1,8 +1,8 @@
 package store
 
 import (
-	"fmt"
 	"github.com/TwiN/go-color"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"log"
 	"net"
@@ -13,7 +13,7 @@ var c Config
 func Save(group, environment, host, user, alias string) {
 	err := viper.Unmarshal(&c)
 	if err != nil {
-		log.Fatal(color.InRed(err.Error()))
+		logrus.Fatal(color.InRed(err.Error()))
 	}
 
 	doesGroupExist := false
@@ -67,7 +67,7 @@ func Save(group, environment, host, user, alias string) {
 		} else {
 			isDuplicate := checkDuplicateServer(server, c.Groups[groupIndex].Environment[environmentIndex].Servers)
 			if isDuplicate {
-				fmt.Println(color.InYellow("Duplicate server found in group"))
+				logrus.Println(color.InYellow("Duplicate server found in group"))
 			} else {
 				c.Groups[groupIndex].Environment[environmentIndex].Servers = append(c.Groups[groupIndex].Environment[environmentIndex].Servers, server)
 			}
@@ -94,7 +94,7 @@ func checkDuplicateServer(s Server, servers []Server) bool {
 func getIP(host string) string {
 	lookupHost, err := net.LookupHost(host)
 	if err != nil {
-		log.Fatal(color.InRed("Could not resolve IP from hostname"))
+		logrus.Fatal(color.InRed("Could not resolve IP from hostname"))
 	}
 	return lookupHost[0]
 }
