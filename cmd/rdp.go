@@ -60,7 +60,7 @@ func init() {
 
 func ConnectToServerRDP(user, host, credentialKey string) {
 	if runtime.GOOS != "linux" {
-		logrus.Error("This function is only supported on Linux")
+		logrus.Warnln("This function is only supported on Linux")
 		return
 	}
 
@@ -128,7 +128,7 @@ func ConnectToServerRDP(user, host, credentialKey string) {
 		cmd.Stderr = os.Stderr
 	}
 
-	fmt.Println(color.InGreen("Attempting full connection..."))
+	logrus.Debugln(color.InGreen("Attempting RDP connection..."))
 	err = cmd.Run()
 	if err != nil {
 		logrus.Fatalf(color.InRed("RDP client exited with error:"), err)

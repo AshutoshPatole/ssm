@@ -11,7 +11,6 @@ import (
 	"github.com/AshutoshPatole/ssm-v2/internal/ssh"
 	"github.com/AshutoshPatole/ssm-v2/internal/store"
 	"github.com/TwiN/go-color"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -48,13 +47,12 @@ ssm connect group-name -e ppd
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		user, host, _, isRDP, err := ListToConnectServers(args[0], filterEnvironment)
+		user, host, credentialKey, isRDP, err := ListToConnectServers(args[0], filterEnvironment)
 		if err != nil {
 			log.Fatal(err)
 		}
 		if isRDP {
-			logrus.Infoln("TODO: Combine both rdp and connect into one")
-			return
+			ConnectToServerRDP(user, host, credentialKey)
 		}
 		ConnectToServer(user, host)
 	},
@@ -150,7 +148,11 @@ func ListToConnectServers(group, environment string) (string, string, string, bo
 		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "IP Address", colonWidth, selectedHostIP)))
 		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "User", colonWidth, user)))
 		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "Environment", colonWidth, selectedEnvName)))
-
+		rdpStatus := "No"
+		if isRDP {
+			rdpStatus = "Yes"
+		}
+		fmt.Println(color.InGreen(fmt.Sprintf("%-*s: %*s", longestLabelLength, "RDP", colonWidth, rdpStatus)))
 		//ssh.Connect(user, selectedHostIP)
 		return user, selectedHostIP, credentialKey, isRDP, nil
 	} else {
