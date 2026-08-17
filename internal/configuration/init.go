@@ -2,9 +2,9 @@ package configuration
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"path/filepath"
+	"path"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -19,14 +19,14 @@ func Setup(client *ssh.Client, user string) {
 
 func clone(client *ssh.Client, remoteHomeDir string) {
 	url := "https://github.com/AshutoshPatole18/dotfiles.git"
-	cloneDir := filepath.Join(remoteHomeDir, "dotfiles")
+	cloneDir := path.Join(remoteHomeDir, "dotfiles")
 
 	command := fmt.Sprintf("git clone %s %s", url, cloneDir)
 	runCommand(client, command)
 }
 
 func runInstallScript(client *ssh.Client, remoteHomeDir string) {
-	installScriptPath := filepath.Join(remoteHomeDir, "dotfiles", "install.sh")
+	installScriptPath := path.Join(remoteHomeDir, "dotfiles", "install.sh")
 
 	command := fmt.Sprintf("bash %s", installScriptPath)
 	runCommand(client, command)
@@ -35,7 +35,8 @@ func runInstallScript(client *ssh.Client, remoteHomeDir string) {
 func runCommand(client *ssh.Client, command string) {
 	session, err := client.NewSession()
 	if err != nil {
-		logrus.Fatal("Failed to create session:", err)
+		logrus.Error("Failed to create session:", err)
+		return
 	}
 	defer func(session *ssh.Session) {
 		_ = session.Close()
@@ -44,6 +45,6 @@ func runCommand(client *ssh.Client, command string) {
 	logrus.Debug("Running command:", command)
 	err = session.Run(command)
 	if err != nil {
-		logrus.Fatal("Failed to run command:", command, err)
+		logrus.Errorf("Failed to run command '%s': %v", command, err)
 	}
 }

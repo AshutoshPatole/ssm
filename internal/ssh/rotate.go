@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 
@@ -31,7 +32,8 @@ func RotateKeys(client *ssh.Client, user, privateKeyPath, publicKeyPath string) 
 	}
 	defer session.Close()
 
-	cmd := fmt.Sprintf("echo '%s' >> ~/.ssh/authorized_keys", string(publicKeyBytes))
+	session.Stdin = bytes.NewReader(publicKeyBytes)
+	cmd := "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 	if err := session.Run(cmd); err != nil {
 		return fmt.Errorf("failed to add new public key: %v", err)
 	}

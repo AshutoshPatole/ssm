@@ -1,17 +1,19 @@
 package ssh
 
 import (
-	"fmt"
+	"bytes"
+	"os"
+	"path/filepath"
+
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
-	"os"
 )
 
 func AddPublicKeys(client *ssh.Client) bool {
-
 	session, err := client.NewSession()
 	if err != nil {
-		logrus.Fatal("Failed to create SSH session:", err)
+		logrus.Error("Failed to create SSH session:", err)
+		return false
 	}
 	defer func(session *ssh.Session) {
 		_ = session.Close()
@@ -25,14 +27,15 @@ func AddPublicKeys(client *ssh.Client) bool {
 		logrus.Error("Failed to get user home directory:", err)
 		return false
 	}
-	publicKeyPath := home + "/.ssh/id_ed25519.pub"
+	publicKeyPath := filepath.Join(home, ".ssh", "id_ed25519.pub")
 	publicKey, err := os.ReadFile(publicKeyPath)
 	if err != nil {
 		logrus.Error("Could not read public key:", publicKeyPath)
 		return false
 	}
 
-	command := fmt.Sprintf("mkdir -p ~/.ssh/; chmod 700 -R ~/.ssh; echo '%s' >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys", publicKey)
+	session.Stdin = bytes.NewReader(publicKey)
+	command := "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 	err = session.Run(command)
 	if err != nil {
 		logrus.Error("Could not add public key:", publicKeyPath, err)

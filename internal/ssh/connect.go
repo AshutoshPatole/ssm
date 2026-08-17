@@ -3,11 +3,11 @@ package ssh
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -16,7 +16,7 @@ import (
 
 func Connect(user, server string) {
 	homeDir, _ := os.UserHomeDir()
-	privateKey := filepath.Join(homeDir, ".ssh/id_ed25519")
+	privateKey := filepath.Join(homeDir, ".ssh", "id_ed25519")
 
 	_, err := os.Stat(privateKey)
 	if os.IsNotExist(err) {
@@ -47,22 +47,23 @@ func Connect(user, server string) {
 	err = sshCmd.Wait()
 	if err != nil {
 		var exitErr *exec.ExitError
-		ok := errors.As(err, &exitErr)
-		if !ok {
-			logrus.Fatal("Failed to wait for SSH command:", err)
+		if errors.As(err, &exitErr) {
+			logrus.Infof("SSH session exited with code: %d", exitErr.ExitCode())
+		} else {
+			logrus.Errorf("SSH command wait failed: %v", err)
 		}
-		waitStatus := exitErr.Sys().(syscall.WaitStatus)
-		logrus.Info("SSH session exited with:", waitStatus.ExitStatus())
 	}
 }
 
 func NewSSHClient(user, host string) (*ssh.Client, error) {
-	homeDir, _ := os.UserHomeDir()
-	privateKey := filepath.Join(homeDir, ".ssh/id_ed25519")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user home directory: %w", err)
+	}
+	privateKey := filepath.Join(homeDir, ".ssh", "id_ed25519")
 
-	_, err := os.Stat(privateKey)
-	if os.IsNotExist(err) {
-		logrus.Fatal("ED25519 private key does not exists on the local system")
+	if _, err := os.Stat(privateKey); os.IsNotExist(err) {
+		return nil, fmt.Errorf("ED25519 private key does not exist at %s", privateKey)
 	}
 	key, err := os.ReadFile(privateKey)
 	if err != nil {
@@ -83,10 +84,12 @@ func NewSSHClient(user, host string) (*ssh.Client, error) {
 		HostKeyAlgorithms: []string{ssh.KeyAlgoRSA, ssh.KeyAlgoDSA, ssh.KeyAlgoED25519, ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521},
 		Timeout:           5 * time.Second,
 	}
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", host, 22), config)
+	client, err := ssh.Dial("tcp", net.JoinHostPort(host, "22"), config)
 	if err != nil {
-		logrus.Fatal(err.Error())
+		return nil, fmt.Errorf("failed to connect via SSH: %w", err)
 	}
 
 	return client, nil
 }
+
+

@@ -45,7 +45,7 @@ func trySSHConnection(user, password, host string) (*ssh.Client, error) {
 		Timeout:         10 * time.Second,
 	}
 
-	return ssh.Dial("ssh", fmt.Sprintf("%s:%d", host, PORT), config)
+	return ssh.Dial("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", PORT)), config)
 }
 
 // trySSHWithCustomDialer attempts to establish an SSH connection using a custom network dialer.
@@ -67,7 +67,7 @@ func trySSHWithCustomDialer(user, password, host string) (*ssh.Client, error) {
 		KeepAlive: 10 * time.Second,
 	}
 
-	conn, err := dialer.Dial("tcp", fmt.Sprintf("%s:%d", host, PORT))
+	conn, err := dialer.Dial("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", PORT)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect: %w", err)
 	}
