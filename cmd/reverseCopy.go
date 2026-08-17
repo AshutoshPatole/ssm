@@ -74,7 +74,7 @@ func ListFiles(client *ssh.Client, remoteDir string) ([]FileInfo, error) {
 		_ = session.Close()
 	}(session)
 
-	output, err := session.Output("ls -l " + remoteDir + " | grep -v '^total' | awk '{print $1, substr($0, index($0,$9))}'")
+	output, err := session.Output("ls -lA " + remoteDir + " | grep -v '^total' | awk '{print $1, substr($0, index($0,$9))}'")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list files: %w", err)
 	}
