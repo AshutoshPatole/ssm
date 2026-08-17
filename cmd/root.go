@@ -20,7 +20,7 @@ var (
 	verbose     bool
 	showVersion bool
 
-	version   = "0.0.0"
+	version   = "0.1.0"
 	commit    = ""
 	treeState = ""
 	date      = ""
