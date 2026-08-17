@@ -14,6 +14,9 @@ var authCmd = &cobra.Command{
 It allows users to register new accounts or sign in to existing ones.
 This command initializes the Firebase authentication service for secure user management.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if rootCmd.PersistentPreRun != nil {
+			rootCmd.PersistentPreRun(cmd, args)
+		}
 		if err := store.InitFirebaseOnce(); err != nil {
 			logrus.Fatalln("Failed to initialize Firebase:", err)
 		}

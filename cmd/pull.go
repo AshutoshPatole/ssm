@@ -1,18 +1,16 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 
 	"cloud.google.com/go/firestore"
 	"github.com/AshutoshPatole/ssm/internal/security"
 	"github.com/AshutoshPatole/ssm/internal/ssh"
 	"github.com/AshutoshPatole/ssm/internal/store"
 	"github.com/sirupsen/logrus"
-
-	"context"
-
 	"github.com/spf13/cobra"
 )
 
@@ -32,119 +30,106 @@ func init() {
 
 // downloadConfigurations retrieves user configurations from Firestore, decrypts them, and saves them to the local system
 func downloadConfigurations() {
+	if err := store.InitFirebaseOnce(); err != nil {
+		logrus.Errorf("Failed to initialize Firebase: %v", err)
+		return
+	}
+
+	userPassword, err := ssh.AskPassword()
+	if err != nil {
+		logrus.Errorf("Error reading password: %v", err)
+		return
+	}
+
+	uid, err := fetchUID(userPassword)
+	if err != nil {
+		logrus.Errorf("Authentication failed: %v", err)
+		return
+	}
+
 	client, err := store.App.Firestore(context.Background())
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Errorf("Failed to connect to Firestore: %v", err)
+		return
 	}
 	defer func(client *firestore.Client) {
-		err := client.Close()
-		if err != nil {
-			logrus.Fatal(err)
-		}
+		_ = client.Close()
 	}(client)
-
-	userPassword, _ := ssh.AskPassword()
-	uid := fetchUID(userPassword)
 
 	logrus.Debugf("Fetching user configurations for UID: %s", uid)
 
 	document, err := client.Collection("configurations").Doc(uid).Get(context.Background())
-	if err != nil {
+	if err != nil || !document.Exists() {
 		logrus.Info("No configuration found for the current user")
-		logrus.Debugf(err.Error())
+		if err != nil {
+			logrus.Debugf("Firestore error: %v", err)
+		}
 		return
 	}
-	if document.Exists() {
-		logrus.Debugf("Found configuration for user with UID: %s", uid)
-	}
+
+	logrus.Debugf("Found configuration for user with UID: %s", uid)
 
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Errorf("Failed to get home directory: %v", err)
+		return
 	}
 
-	yamlEncrypted := document.Data()["ssm_yaml"].(string)
-	publicKeyEncrypted := document.Data()["public"].(string)
-	privateKeyEncrypted := document.Data()["private"].(string)
-	zshrcEncrypted := document.Data()["zshrc"].(string)
-	bashrcEncrypted := document.Data()["bashrc"].(string)
-	sshConfigEncrypted := document.Data()["ssh_config"].(string)
-	tmuxEncrypted := document.Data()["tmux"].(string)
-
+	dataMap := document.Data()
 	key := security.GenerateEncryptionKey(userPassword)
 
-	yaml, err := security.DecryptData(yamlEncrypted, key)
-	if err != nil {
-		logrus.Fatal(err)
+	// Ensure .ssh directory exists
+	sshDir := filepath.Join(userHomeDir, ".ssh")
+	if err := os.MkdirAll(sshDir, 0700); err != nil {
+		logrus.Errorf("Failed to create .ssh directory: %v", err)
 	}
 
-	publicKey, err := security.DecryptData(publicKeyEncrypted, key)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	privateKey, err := security.DecryptData(privateKeyEncrypted, key)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	bashrc, err := security.DecryptData(bashrcEncrypted, key)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	zshrc, err := security.DecryptData(zshrcEncrypted, key)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	sshConfig, err := security.DecryptData(sshConfigEncrypted, key)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	tmux, err := security.DecryptData(tmuxEncrypted, key)
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	// Ensure .ssh directory exists in the user's home directory
-	sshDir := userHomeDir + "/.ssh"
-	_, err = os.Stat(sshDir)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(sshDir, 0755)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-	}
-
-	// Map of files to be saved with their respective data and permissions
-	files := map[string]struct {
-		data        []byte
+	fileConfigs := []struct {
+		mapKey      string
+		relPath     string
 		permissions os.FileMode
 	}{
-		".ssm.yaml":           {yaml, 0644},
-		".ssh/id_ed25519.pub": {publicKey, 0644},
-		".ssh/id_ed25519":     {privateKey, 0600},
-		".bashrc":             {bashrc, 0644},
-		".zshrc":              {zshrc, 0644},
-		".ssh/config":         {sshConfig, 0644},
-		".tmux.conf":          {tmux, 0644},
+		{"ssm_yaml", ".ssm.yaml", 0644},
+		{"public", filepath.Join(".ssh", "id_ed25519.pub"), 0644},
+		{"private", filepath.Join(".ssh", "id_ed25519"), 0600},
+		{"bashrc", ".bashrc", 0644},
+		{"zshrc", ".zshrc", 0644},
+		{"ssh_config", filepath.Join(".ssh", "config"), 0644},
+		{"tmux", ".tmux.conf", 0644},
 	}
 
-	for filePath, fileInfo := range files {
-		fullPath := path.Join(userHomeDir, filePath)
-		logrus.Infof("Attempting to save file: %s", fullPath)
-		logrus.Debugf("File content length: %d bytes", len(fileInfo.data))
+	for _, fc := range fileConfigs {
+		val, ok := dataMap[fc.mapKey]
+		if !ok || val == nil {
+			continue
+		}
+		encryptedStr, ok := val.(string)
+		if !ok || encryptedStr == "" {
+			continue
+		}
 
-		if err := saveFile(fullPath, fileInfo.data, fileInfo.permissions); err != nil {
-			logrus.Errorf("Failed to save %s: %v", filePath, err)
+		decrypted, err := security.DecryptData(encryptedStr, key)
+		if err != nil {
+			logrus.Errorf("Failed to decrypt %s: %v", fc.relPath, err)
+			continue
+		}
+		if len(decrypted) == 0 {
+			continue
+		}
+
+		fullPath := filepath.Join(userHomeDir, fc.relPath)
+		if err := saveFile(fullPath, decrypted, fc.permissions); err != nil {
+			logrus.Errorf("Failed to save %s: %v", fc.relPath, err)
 		}
 	}
 }
 
 // saveFile writes data to a file with specified permissions
 func saveFile(filename string, data []byte, permission os.FileMode) error {
+	dir := filepath.Dir(filename)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", dir, err)
+	}
 	err := os.WriteFile(filename, data, permission)
 	if err != nil {
 		return fmt.Errorf("failed to save file %s: %w", filename, err)
@@ -154,11 +139,19 @@ func saveFile(filename string, data []byte, permission os.FileMode) error {
 }
 
 // fetchUID retrieves the user ID using the provided password
-func fetchUID(userPassword string) string {
+func fetchUID(userPassword string) (string, error) {
 	userMap, err := store.LoginUser(userEmail, userPassword)
 	if err != nil {
-		logrus.Fatal(err)
+		return "", err
 	}
-	userId := userMap["user_id"].(string)
-	return userId
+	uidVal, ok := userMap["user_id"]
+	if !ok {
+		return "", fmt.Errorf("user_id not found in token claims")
+	}
+	uidStr, ok := uidVal.(string)
+	if !ok || uidStr == "" {
+		return "", fmt.Errorf("invalid user_id in token claims")
+	}
+	return uidStr, nil
 }
+

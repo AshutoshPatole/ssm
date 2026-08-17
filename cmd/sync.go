@@ -18,6 +18,9 @@ var syncCmd = &cobra.Command{
 as well as the SSM configuration file and other dot files. This ensures that your SSH setup is consistent
 across different machines and provides a backup of your essential SSH-related files.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if rootCmd.PersistentPreRun != nil {
+			rootCmd.PersistentPreRun(cmd, args)
+		}
 		if err := store.InitFirebaseOnce(); err != nil {
 			logrus.Fatalln("Failed to initialize Firebase:", err)
 		}
