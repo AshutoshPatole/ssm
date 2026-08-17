@@ -34,10 +34,7 @@ It simplifies the management of SSH profiles with commands to register users, im
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if showVersion {
-			fmt.Println("Version:", version)
-			return
-		}
+		fmt.Println("Version:", version)
 	},
 }
 
